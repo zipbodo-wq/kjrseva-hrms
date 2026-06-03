@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>KJRSEVA HRMS - Complete Employee Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', system-ui, 'Segoe UI', sans-serif;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .animated-bg span {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(44, 159, 110, 0.05);
+            border-radius: 50%;
+            animation: float 20s infinite linear;
+        }
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 15px;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            border-radius: 60px;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #2c9f6e, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .logout-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(220,38,38,0.4); }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            padding: 28px;
+            margin-bottom: 28px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transition: all 0.4s;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .card:hover { transform: translateY(-5px); }
+
+        .form-grid, .form-grid-3col, .form-grid-4col { display: grid; gap: 20px; }
+        .form-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        .form-grid-3col { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .form-grid-4col { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        .input-group label { font-weight: 600; font-size: 0.85rem; color: #1f5e7a; }
+
+        input, select, textarea {
+            padding: 12px 16px;
+            border-radius: 28px;
+            border: 2px solid #e2e8f0;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            background: white;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #2c9f6e;
+            box-shadow: 0 0 0 3px rgba(44,159,110,0.2);
+        }
+
+        button {
+            padding: 12px 20px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary { background: linear-gradient(135deg, #1f5e7a, #0f445c); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+        .btn-success { background: linear-gradient(135deg, #2c9f6e, #1e7a54); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .btn-info { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            padding: 25px;
+            border-radius: 28px;
+            text-align: center;
+            transition: all 0.4s;
+            cursor: pointer;
+        }
+        .stat-card:hover { transform: translateY(-8px) scale(1.02); }
+        .stat-card .stat-value {
+            font-size: 38px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1f5e7a, #2c9f6e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-top: 10px;
+        }
+        .stat-card .stat-label { font-size: 14px; color: #4a6a7a; font-weight: 600; }
+
+        .chart-container {
+            max-width: 550px;
+            margin: 25px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 28px;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .filter-btn {
+            background: #eef2f5;
+            color: #1f5e7a;
+            padding: 8px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .filter-btn.active {
+            background: linear-gradient(135deg, #1f5e7a, #0f445c);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow-x: auto;
+            display: block;
+        }
+        .data-table th, .data-table td {
+            padding: 14px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+        }
+        .data-table th {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+        }
+        .data-table tr:hover { background: #f8fafc; transition: 0.2s; }
+
+        .profile-preview {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            padding: 25px;
+            border-radius: 28px;
+        }
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #2c9f6e, #1f5e7a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 42px;
+            font-weight: bold;
+            overflow: hidden;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .login-prompt { text-align: center; padding: 40px; }
+        .forgot-link { color: #3b82f6; cursor: pointer; font-size: 12px; margin-top: 10px; display: inline-block; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 28px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        .close-modal {
+            float: right;
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .badge { padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .security-note {
+            background: #e0f2fe;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 12px;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .login-tab {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .login-method {
+            padding: 8px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            background: #e2e8f0;
+        }
+        .login-method.active {
+            background: #2c9f6e;
+            color: white;
+        }
+        .settings-panel {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .stat-card .stat-value { font-size: 28px; }
+            .data-table th, .data-table td { font-size: 0.7rem; padding: 8px 4px; }
+        }
+    </style>
+</head>
+<body>
+<div class="animated-bg" id="animatedBg"></div>
+<div class="container">
+    <div class="header">
+        <h1>🏢 KJRSEVA HRMS</h1>
+        <button id="globalLogoutBtn" class="logout-btn">🚪 Logout</button>
+    </div>
+
+    <!-- OWNER LOGIN SECTION -->
+    <div id="ownerLoginSection" class="card">
+        <div class="login-prompt">
+            <h2 style="color:#1f5e7a;">👑 Owner Login</h2>
+            <div class="security-note">🔐 Login using Email OR Mobile Number</div>
+            
+            <div class="login-tab">
+                <span class="login-method active" onclick="switchOwnerMethod('email')">📧 Email Login</span>
+                <span class="login-method" onclick="switchOwnerMethod('mobile')">📱 Mobile Login</span>
+            </div>
+            
+            <div id="ownerEmailLoginDiv">
+                <input type="email" id="ownerEmailLogin" placeholder="Owner Email" style="width: 300px; margin: 10px;">
+            </div>
+            <div id="ownerMobileLoginDiv" style="display:none;">
+                <select id="ownerCountryCode" style="width: 100px; margin: 10px;">
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                </select>
+                <input type="tel" id="ownerMobileLogin" placeholder="Mobile Number" style="width: 200px; margin: 10px;">
+            </div>
+            <div>
+                <input type="password" id="ownerPasswordLogin" placeholder="Password" style="width: 300px; margin: 10px;">
+            </div>
+            <button id="ownerLoginBtn" class="btn-primary">🔓 Login as Owner</button>
+            <div>
+                <a class="forgot-link" onclick="showOwnerForgotModal()">🔑 Forgot Password?</a>
+            </div>
+            <div id="ownerLoginMsg" style="margin-top:15px; font-size:14px;"></div>
+            <div class="security-note" style="margin-top:20px; background:#fef3c7;">
+                <strong>📧 Demo Owner:</strong> owner@kjrseva.com / Admin@2026
+            </div>
+            <div class="security-note" style="margin-top:10px;">
+                🆕 <strong>New Owner?</strong> <a onclick="showRegisterOwnerModal()" style="color:#2c9f6e; cursor:pointer;">Register New Business</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMPLOYEE LOGIN SECTION -->
+    <div id="employeeLoginSection" class="card">
+        <div class="login-prompt">
+            <h2 style="color:#1f5e7a;">👤 Employee Login</h2>
+            <div class="security-note">🔐 Login using Email OR Mobile Number</div>
+            
+            <div class="login-tab">
+                <span class="login-method active" onclick="switchEmpMethod('email')">📧 Email Login</span>
+                <span class="login-method" onclick="switchEmpMethod('mobile')">📱 Mobile Login</span>
+            </div>
+            
+            <div id="empEmailLoginDiv">
+                <input type="email" id="empEmailLogin" placeholder="Your Email" style="width: 300px; margin: 10px;">
+            </div>
+            <div id="empMobileLoginDiv" style="display:none;">
+                <select id="empCountryCode" style="width: 100px; margin: 10px;">
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                </select>
+                <input type="tel" id="empMobileLogin" placeholder="Mobile Number" style="width: 200px; margin: 10px;">
+            </div>
+            <div>
+                <input type="password" id="empPasswordLogin" placeholder="Password" style="width: 300px; margin: 10px;">
+            </div>
+            <button id="empLoginBtn" class="btn-primary">🔓 Login as Employee</button>
+            <div>
+                <a class="forgot-link" onclick="showEmpForgotModal()">🔑 Forgot Password?</a>
+            </div>
+            <div id="empLoginMsg" style="margin-top:15px; font-size:14px;"></div>
+            <div class="security-note" style="margin-top:20px; background:#fef3c7;">
+                <strong>📧 Demo Employees:</strong><br>
+                bhagaban@kjr.com / Bhagaban123 | sambit@kjr.com / Sambit123
+            </div>
+        </div>
+    </div>
+
+    <!-- OWNER DASHBOARD -->
+    <div id="ownerDashboard" style="display:none;">
+        <!-- Settings Panel - Edit Services -->
+        <div class="card settings-panel">
+            <h3>⚙️ Service Settings - Manage Work Names & Prices</h3>
+            <div class="form-grid-4col" style="margin-bottom: 20px;">
+                <div class="input-group"><label>New Service Name</label><input type="text" id="newServiceName" placeholder="Enter service name"></div>
+                <div class="input-group"><label>Service Price (₹)</label><input type="number" id="newServicePrice" placeholder="Amount"></div>
+                <div class="input-group"><label>Category</label><select id="newServiceCategory"><option value="General">General</option><option value="Government">Government</option><option value="Banking">Banking</option><option value="Education">Education</option><option value="Vehicle">Vehicle</option></select></div>
+                <div class="input-group"><button id="addServiceBtn" class="btn-success">➕ Add New Service</button></div>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="data-table">
+                    <thead><tr><th>Service Name</th><th>Price (₹)</th><th>Category</th><th>Actions</th></tr></thead>
+                    <tbody id="servicesListBody"></tbody>
+                </table>
+            </div>
+            <div class="security-note" style="margin-top: 15px; background: #fef3c7;">
+                ⚠️ Editing/Deleting services will NOT affect existing work entries (historical data remains)
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📝 Register New Employee (Under Your Business)</h3>
+            <div class="form-grid-3col">
+                <div class="input-group"><label>Full Name *</label><input type="text" id="regFullName" placeholder="Enter full name"></div>
+                <div class="input-group"><label>Email (Login) *</label><input type="email" id="regEmail" placeholder="employee@example.com"></div>
+                <div class="input-group"><label>Mobile No *</label><input type="tel" id="regMobile" placeholder="Mobile number"></div>
+                <div class="input-group"><label>Password *</label><input type="password" id="regPassword" placeholder="Min 4 characters"></div>
+                <div class="input-group"><label>Aadhar No</label><input type="text" id="regAadhar" placeholder="Aadhar number"></div>
+                <div class="input-group"><label>Father's Name</label><input type="text" id="regFather" placeholder="Father's name"></div>
+                <div class="input-group"><label>Mother's Name</label><input type="text" id="regMother" placeholder="Mother's name"></div>
+                <div class="input-group"><label>Present Address</label><textarea id="regPresentAddr" rows="2" placeholder="Current address"></textarea></div>
+                <div class="input-group"><label>Permanent Address</label><textarea id="regPermAddr" rows="2" placeholder="Permanent address"></textarea></div>
+                <div class="input-group"><label>Qualification</label><input type="text" id="regQualification" placeholder="Education"></div>
+                <div class="input-group"><label>Joining Date</label><input type="date" id="regJoiningDate"></div>
+                <div class="input-group"><label>Profile Photo</label><input type="file" id="regPhotoFile" accept="image/*"></div>
+                <div class="input-group"><button id="registerEmpBtn" class="btn-success">✅ Register Employee</button></div>
+            </div>
+        </div>
+
+        <div class="card"><h3>👥 My Employees</h3><div id="ownerEmployeeList"></div></div>
+
+        <div class="card">
+            <h3>➕ Add Work Entry</h3>
+            <div class="form-grid">
+                <div class="input-group"><label>Employee</label><select id="ownerEmpSelect"></select></div>
+                <div class="input-group"><label>Service</label><select id="ownerWorkSelect"></select></div>
+                <div class="input-group"><label>Date</label><input type="date" id="ownerWorkDate"></div>
+                <div class="input-group"><label>Customer Name</label><input type="text" id="ownerCustName" placeholder="Customer name"></div>
+                <div class="input-group"><label>Customer Phone</label><input type="text" id="ownerCustPhone" placeholder="Phone number"></div>
+                <div class="input-group"><button id="ownerAddWorkBtn" class="btn-primary">➕ ADD WORK</button></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>💰 Record Payment to Employee</h3>
+            <div class="form-grid-3col">
+                <div class="input-group"><label>Employee</label><select id="paymentEmpSelect"></select></div>
+                <div class="input-group"><label>Amount (₹)</label><input type="number" id="paymentAmount" placeholder="0"></div>
+                <div class="input-group"><label>Payment Date</label><input type="date" id="paymentDate"></div>
+                <div class="input-group"><label>Payment Type</label><select id="paymentType"><option>Salary</option><option>Bonus</option><option>Advance</option><option>Incentive</option></select></div>
+                <div class="input-group"><label>Payment Mode</label><select id="paymentMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select></div>
+                <div class="input-group"><label>Transaction ID</label><input type="text" id="paymentRef" placeholder="Reference/UTR"></div>
+                <div class="input-group"><label>Remarks</label><input type="text" id="paymentNote" placeholder="Additional notes"></div>
+                <div class="input-group"><button id="recordPaymentBtn" class="btn-success">💸 RECORD PAYMENT</button></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🔄 Employee Status (Leave / Re-join)</h3>
+            <div class="form-grid">
+                <div class="input-group"><label>Employee</label><select id="statusEmpSelect"></select></div>
+                <div class="input-group"><label>Action</label><select id="statusAction"><option value="leave">Mark as Left</option><option value="rejoin">Re-join Employee</option></select></div>
+                <div class="input-group"><label>Effective Date</label><input type="date" id="statusDate"></div>
+                <div class="input-group"><button id="applyStatusBtn" class="btn-warning">APPLY</button></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📊 My Business Stats</h3>
+            <div id="ownerStatsGrid"></div>
+            <div class="chart-container"><canvas id="ownerChart"></canvas></div>
+        </div>
+
+        <div class="card">
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="today">📌 Today</button>
+                <button class="filter-btn" data-filter="month">📆 This Month</button>
+                <button class="filter-btn" data-filter="year">🗓️ This Year</button>
+                <button class="filter-btn" data-filter="all">📂 All Time</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead><tr><th>Sl No</th><th>Date</th><th>Time</th><th>Employee</th><th>Work Name</th><th>Amount (₹)</th><th>Customer</th><th>Phone</th><th>Actions</th></tr></thead>
+                    <tbody id="ownerEntriesBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>💰 Payment History</h3>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead><tr><th>Date</th><th>Employee</th><th>Amount</th><th>Type</th><th>Mode</th><th>Transaction ID</th><th>Remarks</th></tr></thead>
+                    <tbody id="ownerPaymentBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📋 Employee Financial Summary</h3>
+            <div style="overflow-x: auto;"><div id="ownerSummaryDiv"></div></div>
+        </div>
+    </div>
+
+    <!-- EMPLOYEE DASHBOARD -->
+    <div id="employeeDashboard" style="display:none;">
+        <div class="card"><h3>👤 My Profile</h3><div id="empProfileDisplay"></div></div>
+        <div class="card owner-info-card"><h3>🏢 My Organization / Owner Details</h3><div id="empOwnerInfo"></div></div>
+        <div class="card"><h3>📝 Register Your Work</h3>
+            <div class="form-grid">
+                <div class="input-group"><label>Service</label><select id="empWorkSelect"></select></div>
+                <div class="input-group"><label>Date</label><input type="date" id="empWorkDate" readonly style="background:#f5f5f5;"></div>
+                <div class="input-group"><label>Time</label><input type="text" id="empWorkTime" readonly value="Auto"></div>
+                <div class="input-group"><label>Customer Name</label><input type="text" id="empCustName" placeholder="Optional"></div>
+                <div class="input-group"><label>Customer Phone</label><input type="text" id="empCustPhone" placeholder="Optional"></div>
+                <div class="input-group"><button id="empSubmitWorkBtn" class="btn-success">✅ SUBMIT WORK</button></div>
+            </div>
+            <p class="security-note" style="margin-top:10px;">⚠️ Date & Time auto-recorded, cannot edit after submission</p>
+        </div>
+        <div class="card"><h3>📊 My Performance</h3><div id="empStatsGrid"></div>
+            <div class="chart-container"><canvas id="empEarningChart"></canvas></div>
+            <div class="chart-container"><canvas id="empPendingChart"></canvas></div>
+        </div>
+        <div class="card"><h3>📋 My Work History</h3>
+            <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Amount</th><th>Customer</th><th>Phone</th></tr></thead><tbody id="empEntriesBody"></tbody></table></div>
+        </div>
+        <div class="card"><h3>💰 My Payments</h3>
+            <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Mode</th><th>Transaction ID</th><th>Note</th></tr></thead><tbody id="empPayHistoryBody"></tbody></table></div>
+        </div>
+    </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div id="forgotModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h3 style="color:#1f5e7a;">🔑 Reset Your Password</h3>
+        <p style="margin: 15px 0;">Enter your email address and we'll send you a 6-digit reset code.</p>
+        <input type="email" id="resetEmail" placeholder="Your Email Address" style="width: 100%; margin: 10px 0; padding: 12px;">
+        <button onclick="sendResetCode()" class="btn-info" style="width: 100%;">📧 Send Reset Code</button>
+        <div id="resetStep2" style="display: none; margin-top: 20px;">
+            <input type="text" id="resetCode" placeholder="Enter 6-digit Code" style="width: 100%; margin: 10px 0; padding: 12px;">
+            <input type="password" id="newPassword" placeholder="New Password (min 4 characters)" style="width: 100%; margin: 10px 0; padding: 12px;">
+            <button onclick="verifyResetCode()" class="btn-success" style="width: 100%;">✅ Reset Password</button>
+        </div>
+        <div id="resetMsg" style="margin-top: 15px; font-size: 13px;"></div>
+    </div>
+</div>
+
+<!-- Register New Owner Modal -->
+<div id="registerOwnerModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeRegisterModal()">&times;</span>
+        <h3>🏢 Register New Business Owner</h3>
+        <input type="text" id="newOwnerName" placeholder="Owner Name" style="width: 100%; margin: 10px 0;">
+        <input type="email" id="newOwnerEmail" placeholder="Email Address" style="width: 100%; margin: 10px 0;">
+        <input type="tel" id="newOwnerMobile" placeholder="Mobile Number (with country code)" style="width: 100%; margin: 10px 0;">
+        <input type="password" id="newOwnerPassword" placeholder="Password (min 4 chars)" style="width: 100%; margin: 10px 0;">
+        <input type="text" id="newOwnerBusiness" placeholder="Business Name" style="width: 100%; margin: 10px 0;">
+        <button onclick="registerNewOwner()" class="btn-success">✅ Register Business</button>
+        <div id="registerOwnerMsg" style="margin-top: 15px;"></div>
+    </div>
+</div>
+
+<script>
+    // ============ EMAILJS CONFIGURATION - REPLACE WITH YOUR KEYS ============
+    // STEP 1: Go to https://www.emailjs.com and create free account
+    // STEP 2: Get your Public Key from Account → API Keys
+    // STEP 3: Create Email Service and get Service ID
+    // STEP 4: Create Password Reset Template
+    // STEP 5: Replace the values below:
+    
+    const EMAILJS_PUBLIC_KEY = "YOUR_EMAILJS_PUBLIC_KEY";  // ← REPLACE THIS (e.g., "user_abc123xyz")
+    const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";          // ← REPLACE THIS (e.g., "service_abc123")
+    const EMAILJS_RESET_TEMPLATE = "password_reset_template"; // ← Your template ID
+    
+    // Initialize EmailJS if configured
+    if(EMAILJS_PUBLIC_KEY !== "YOUR_EMAILJS_PUBLIC_KEY") {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        console.log("✅ EmailJS initialized");
+    }
+    
+    // ============ DATA STORAGE ============
+    let owners = [];
+    let currentOwner = null;
+    let currentEmployee = null;
+    let currentFilter = 'today';
+    let ownerChart, empEarningChart, empPendingChart;
+    let currentOwnerMethod = 'email', currentEmpMethod = 'email';
+    
+    // Password reset variables
+    let pendingResetEmail = null;
+    let pendingResetCode = null;
+    let pendingResetType = null;
+    let resetTimer = null;
+    
+    // Default Services Catalog
+    const defaultServicesCatalog = [
+        {name:"B & W PRINT",amount:0,category:"General"},{name:"Passport Photo",amount:10,category:"General"},{name:"POLICE VERIFICATION",amount:20,category:"Government"},{name:"TRADE LICENCE",amount:30,category:"Government"},{name:"FOOD LICENCE",amount:30,category:"Government"},{name:"KRUSHAK ODISHA",amount:20,category:"Government"},{name:"CM KISSAN",amount:15,category:"Government"},{name:"EPFO MONEY WITHDRAW",amount:15,category:"Banking"},{name:"EPFO FULL KYC",amount:30,category:"Banking"},{name:"EPFO PASSWORD CHANGE",amount:10,category:"Banking"},{name:"LEARNING LINCENCE (L.L)",amount:30,category:"Vehicle"},{name:"DRIVING LINCENCE (D.L)",amount:20,category:"Vehicle"},{name:"VEHICLE RENUEAL",amount:20,category:"Vehicle"},{name:"VEHICLE TAX",amount:15,category:"Vehicle"},{name:"VEHICLE OWNERSHIP TRANSFER 2",amount:70,category:"Vehicle"},{name:"VEHICLE OWNERSHIP TRANSFER",amount:70,category:"Vehicle"},{name:"VEHICLE CHANGE ADDRESS",amount:20,category:"Vehicle"},{name:"VEHICLE FITNESS",amount:20,category:"Vehicle"},{name:"VEHICLE NOC",amount:25,category:"Vehicle"},{name:"VEHICLE RC PARTICULAR",amount:10,category:"Vehicle"},{name:"VEHICLE MOBLE NO. UPDATE",amount:10,category:"Vehicle"},{name:"H.P ADDITION",amount:25,category:"Vehicle"},{name:"H.P TERMINATION",amount:25,category:"Vehicle"},{name:"CASTE CERTIFICATE",amount:25,category:"Government"},{name:"RESIDENCE CERTIFICATE",amount:25,category:"Government"},{name:"INCOME CERTIFICATE",amount:25,category:"Government"},{name:"LEGAL HEIR CERTIFICATE",amount:30,category:"Government"},{name:"NEW PAN CARD",amount:30,category:"Government"},{name:"PAN MINOR",amount:25,category:"Government"},{name:"PAN CORRECTION",amount:30,category:"Government"},{name:"INSTANT PAN CARD",amount:10,category:"Government"},{name:"NEW VOTER CARD",amount:20,category:"Government"},{name:"VOTER CORRECTION",amount:15,category:"Government"},{name:"NEW RATION CARD",amount:20,category:"Government"},{name:"PASSPORT APPLICATION",amount:30,category:"Government"},{name:"UDYOG AADHAR",amount:30,category:"Government"},{name:"BIRTH CERTIFICATE",amount:20,category:"Government"},{name:"DEATH CERTIFICATE",amount:20,category:"Government"},{name:"SCHOLARSHIP APPLY",amount:25,category:"Education"},{name:"+2/+3/PG/ITI/DIPLO/B.TECH",amount:25,category:"Education"},{name:"UGC NET",amount:25,category:"Education"},{name:"OJEE",amount:25,category:"Education"},{name:"JEE",amount:25,category:"Education"},{name:"NEET",amount:25,category:"Education"},{name:"CUET",amount:25,category:"Education"},{name:"OUAT",amount:25,category:"Education"},{name:"NCERT",amount:25,category:"Education"},{name:"IGNOU",amount:25,category:"Education"},{name:"OTET",amount:25,category:"Education"},{name:"PM AWAS 2.0",amount:20,category:"Government"},{name:"RATION CARD NAME ADD",amount:10,category:"Government"},{name:"OWNERSHIP TRANSFER 2 S+HP",amount:80,category:"Vehicle"},{name:"OWNERSHIP TRANSFER 4 S+HP",amount:100,category:"Vehicle"},{name:"OWNERSHIP TRANSFER 2 S",amount:70,category:"Vehicle"},{name:"OWNERSHIP TRANSFER 4 S",amount:90,category:"Vehicle"},{name:"SWACHHA BHARAT TOILET",amount:20,category:"Government"},{name:"VEHICLE DUPLICATE RC",amount:20,category:"Vehicle"},{name:"DBT",amount:10,category:"Banking"},{name:"BANK ACCOUNT OPENING",amount:25,category:"Banking"},{name:"PVC CARD",amount:15,category:"General"},{name:"AADHAR CARD + LAM",amount:15,category:"Government"},{name:"COLOR PRINT",amount:0,category:"General"},{name:"GHARABADI",amount:25,category:"Government"},{name:"NMMS SCHOLARSHIP",amount:25,category:"Education"},{name:"PRIVATE SCHOLARSHIP",amount:25,category:"Education"},{name:"GOVT SCHOOL SCHOLARSHIP",amount:25,category:"Education"},{name:"SCHOLARSHIP RENEW",amount:25,category:"Education"},{name:"L.L RENEW",amount:20,category:"Vehicle"},{name:"NEW LABOUR CARD",amount:30,category:"Government"},{name:"LIFE CERTIFICATE",amount:10,category:"Government"},{name:"OTHER",amount:25,category:"General"},{name:"LAMINATION",amount:0,category:"General"},{name:"MONEY WITHDRAWAL",amount:0,category:"Banking"},{name:"MONEY SEND",amount:0,category:"Banking"},{name:"GO SUGAM",amount:20,category:"Government"},{name:"OTR",amount:5,category:"General"},{name:"SPIRAL BINDING",amount:17,category:"General"},{name:"E PAUTI",amount:5,category:"General"}
+    ];
+    
+    function loadData() {
+        const stored = localStorage.getItem('kjr_working_system_v3');
+        if(stored) {
+            owners = JSON.parse(stored);
+        } else {
+            owners = [{
+                id: "owner_1",
+                name: "Satyaban Jena",
+                email: "owner@kjrseva.com",
+                mobile: "+919876543210",
+                passwordHash: btoa("Admin@2026"),
+                businessName: "KJR Seva - Keonjhar",
+                servicesCatalog: JSON.parse(JSON.stringify(defaultServicesCatalog)),
+                employees: [
+                    { id: "emp_1", name: "Bhagaban Jena", email: "bhagaban@kjr.com", mobile: "+919876543211", passwordHash: btoa("Bhagaban123"), aadhar: "2345-6789-0123", father: "Shri Jena", mother: "Rama Jena", presentAddr: "Jagannathpur, Keonjhar", permAddr: "Jagannathpur, Keonjhar", qualification: "MBA", joiningDate: "2024-02-10", leavingDate: null, isActive: true, photoData: null },
+                    { id: "emp_2", name: "Sambit Kumar Jena", email: "sambit@kjr.com", mobile: "+919876543212", passwordHash: btoa("Sambit123"), aadhar: "3456-7890-1234", father: "Shri Jena", mother: "Pratima Jena", presentAddr: "Keonjhar Town", permAddr: "Keonjhar Town", qualification: "BCA", joiningDate: "2024-03-01", leavingDate: null, isActive: true, photoData: null }
+                ],
+                workEntries: [],
+                paymentRecords: []
+            }];
+        }
+    }
+    
+    function saveOwners() {
+        localStorage.setItem('kjr_working_system_v3', JSON.stringify(owners));
+    }
+    
+    function getTodayStr() { return new Date().toISOString().slice(0,10); }
+    function getCurrentTime() { return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit', second:'2-digit' }); }
+    function fileToBase64(file) { return new Promise((resolve) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); }); }
+    function generateResetCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+    
+    // ============ SERVICE MANAGEMENT FUNCTIONS ============
+    function renderServicesList() {
+        if(!currentOwner) return;
+        const tbody = document.getElementById('servicesListBody');
+        tbody.innerHTML = currentOwner.servicesCatalog.map((service, index) => `
+            <tr>
+                <td><input type="text" id="service_name_${index}" value="${service.name.replace(/"/g, '&quot;')}" style="width:100%;"></td>
+                <td><input type="number" id="service_price_${index}" value="${service.amount}" style="width:100px;"></td>
+                <td>
+                    <select id="service_category_${index}">
+                        <option ${service.category === 'General' ? 'selected' : ''}>General</option>
+                        <option ${service.category === 'Government' ? 'selected' : ''}>Government</option>
+                        <option ${service.category === 'Banking' ? 'selected' : ''}>Banking</option>
+                        <option ${service.category === 'Education' ? 'selected' : ''}>Education</option>
+                        <option ${service.category === 'Vehicle' ? 'selected' : ''}>Vehicle</option>
+                    </select>
+                 </td>
+                <td>
+                    <button class="btn-primary" style="padding:4px 12px; margin-right:5px;" onclick="updateService(${index})">💾 Save</button>
+                    <button class="btn-danger" style="padding:4px 12px;" onclick="deleteService(${index})">🗑️ Delete</button>
+                 </td>
+            </tr>
+        `).join('');
+    }
+    
+    window.updateService = function(index) {
+        const newName = document.getElementById(`service_name_${index}`).value.trim();
+        const newPrice = parseInt(document.getElementById(`service_price_${index}`).value);
+        const newCategory = document.getElementById(`service_category_${index}`).value;
+        if(!newName) { alert("Service name required"); return; }
+        if(isNaN(newPrice)) { alert("Valid price required"); return; }
+        currentOwner.servicesCatalog[index].name = newName;
+        currentOwner.servicesCatalog[index].amount = newPrice;
+        currentOwner.servicesCatalog[index].category = newCategory;
+        saveOwners();
+        renderServicesList();
+        updateOwnerSelectors();
+        alert(`✅ Service "${newName}" updated!`);
+    };
+    
+    window.deleteService = function(index) {
+        const serviceName = currentOwner.servicesCatalog[index].name;
+        if(confirm(`⚠️ Delete service "${serviceName}" permanently?`)) {
+            currentOwner.servicesCatalog.splice(index, 1);
+            saveOwners();
+            renderServicesList();
+            updateOwnerSelectors();
+            alert(`✅ Service "${serviceName}" deleted!`);
+        }
+    };
+    
+    function addNewService() {
+        const newName = document.getElementById('newServiceName').value.trim();
+        const newPrice = parseInt(document.getElementById('newServicePrice').value);
+        const newCategory = document.getElementById('newServiceCategory').value;
+        if(!newName) { alert("Enter service name"); return; }
+        if(isNaN(newPrice)) { alert("Enter valid price"); return; }
+        currentOwner.servicesCatalog.push({
+            name: newName,
+            amount: newPrice,
+            category: newCategory
+        });
+        saveOwners();
+        renderServicesList();
+        updateOwnerSelectors();
+        document.getElementById('newServiceName').value = '';
+        document.getElementById('newServicePrice').value = '';
+        alert(`✅ New service "${newName}" added!`);
+    }
+    
+    // ============ EMAILJS FUNCTIONS ============
+    async function sendResetEmail(toEmail, name, resetCode) {
+        if(EMAILJS_PUBLIC_KEY === "YOUR_EMAILJS_PUBLIC_KEY") {
+            alert(`[DEMO MODE] Reset code for ${name}: ${resetCode}\n\nTo enable real email, configure EmailJS with your keys.`);
+            return true;
+        }
+        try {
+            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_RESET_TEMPLATE, { to_email: toEmail, to_name: name, resetCode: resetCode });
+            return true;
+        } catch(e) { alert("Email error: " + e.text); return false; }
+    }
+    
+    function showOwnerForgotModal() { pendingResetType = 'owner'; document.getElementById('forgotModal').style.display = 'flex'; document.getElementById('resetEmail').value = ''; document.getElementById('resetStep2').style.display = 'none'; document.getElementById('resetMsg').innerHTML = ''; }
+    function showEmpForgotModal() { pendingResetType = 'employee'; document.getElementById('forgotModal').style.display = 'flex'; document.getElementById('resetEmail').value = ''; document.getElementById('resetStep2').style.display = 'none'; document.getElementById('resetMsg').innerHTML = ''; }
+    function closeModal() { document.getElementById('forgotModal').style.display = 'none'; if(resetTimer) clearTimeout(resetTimer); pendingResetCode = null; }
+    function closeRegisterModal() { document.getElementById('registerOwnerModal').style.display = 'none'; }
+    
+    async function sendResetCode() {
+        const email = document.getElementById('resetEmail').value.trim();
+        if(!email || !email.includes('@')) { document.getElementById('resetMsg').innerHTML = '<span style="color:red;">❌ Enter valid email</span>'; return; }
+        let targetUser = null, userName = "";
+        if(pendingResetType === 'owner') {
+            targetUser = owners.find(o => o.email === email);
+            if(targetUser) userName = targetUser.name;
+        } else {
+            for(let owner of owners) {
+                const emp = owner.employees.find(e => e.email === email);
+                if(emp) { targetUser = emp; userName = emp.name; break; }
+            }
+        }
+        if(!targetUser) { document.getElementById('resetMsg').innerHTML = '<span style="color:red;">❌ Email not found</span>'; return; }
+        const resetCode = generateResetCode();
+        pendingResetCode = resetCode;
+        const sent = await sendResetEmail(email, userName, resetCode);
+        if(sent) {
+            document.getElementById('resetMsg').innerHTML = '<span style="color:green;">✅ Reset code sent! Check your email.</span>';
+            document.getElementById('resetStep2').style.display = 'block';
+            if(resetTimer) clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => { pendingResetCode = null; document.getElementById('resetMsg').innerHTML = '<span style="color:orange;">⏰ Code expired</span>'; document.getElementById('resetStep2').style.display = 'none'; }, 600000);
+        }
+    }
+    
+    function verifyResetCode() {
+        const code = document.getElementById('resetCode').value;
+        const newPwd = document.getElementById('newPassword').value;
+        if(code !== pendingResetCode) { document.getElementById('resetMsg').innerHTML = '<span style="color:red;">Invalid code</span>'; return; }
+        if(newPwd.length < 4) { document.getElementById('resetMsg').innerHTML = '<span style="color:red;">Password min 4 chars</span>'; return; }
+        if(pendingResetType === 'owner') {
+            const owner = owners.find(o => o.email === document.getElementById('resetEmail').value);
+            if(owner) owner.passwordHash = btoa(newPwd);
+        } else {
+            for(let owner of owners) {
+                const emp = owner.employees.find(e => e.email === document.getElementById('resetEmail').value);
+                if(emp) { emp.passwordHash = btoa(newPwd); break; }
+            }
+        }
+        saveOwners();
+        document.getElementById('resetMsg').innerHTML = '<span style="color:green;">✅ Password reset! Please login.</span>';
+        setTimeout(() => { closeModal(); alert("Password reset complete! Please login with new password."); }, 2000);
+    }
+    
+    function registerNewOwner() {
+        const name = document.getElementById('newOwnerName').value.trim();
+        const email = document.getElementById('newOwnerEmail').value.trim();
+        const mobile = document.getElementById('newOwnerMobile').value.trim();
+        const password = document.getElementById('newOwnerPassword').value;
+        const business = document.getElementById('newOwnerBusiness').value.trim();
+        if(!name || !email || !mobile || !password || !business) {
+            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">All fields required</span>';
+            return;
+        }
+        if(password.length < 4) { document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">Password min 4 chars</span>'; return; }
+        if(owners.find(o => o.email === email || o.mobile === mobile)) {
+            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">Owner already exists</span>';
+            return;
+        }
+        owners.push({
+            id: "owner_" + Date.now(), name: name, email: email, mobile: mobile,
+            passwordHash: btoa(password), businessName: business,
+            servicesCatalog: JSON.parse(JSON.stringify(defaultServicesCatalog)),
+            employees: [], workEntries: [], paymentRecords: []
+        });
+        saveOwners();
+        document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:green;">✅ Business registered! You can now login.</span>';
+        setTimeout(() => { document.getElementById('registerOwnerModal').style.display = 'none'; location.reload(); }, 2000);
+    }
+    
+    function showRegisterOwnerModal() { document.getElementById('registerOwnerModal').style.display = 'flex'; }
+    
+    // Owner Login
+    function switchOwnerMethod(method) {
+        currentOwnerMethod = method;
+        document.getElementById('ownerEmailLoginDiv').style.display = method === 'email' ? 'block' : 'none';
+        document.getElementById('ownerMobileLoginDiv').style.display = method === 'mobile' ? 'block' : 'none';
+        const methods = document.querySelectorAll('#ownerLoginSection .login-method');
+        if(methods[0]) methods[0].classList.toggle('active', method === 'email');
+        if(methods[1]) methods[1].classList.toggle('active', method === 'mobile');
+    }
+    
+    document.getElementById('ownerLoginBtn').onclick = () => {
+        let identifier, owner;
+        if(currentOwnerMethod === 'email') {
+            identifier = document.getElementById('ownerEmailLogin').value;
+            owner = owners.find(o => o.email === identifier);
+        } else {
+            const code = document.getElementById('ownerCountryCode').value;
+            const mobile = document.getElementById('ownerMobileLogin').value;
+            identifier = code + mobile;
+            owner = owners.find(o => o.mobile === identifier);
+        }
+        const password = document.getElementById('ownerPasswordLogin').value;
+        if(owner && owner.passwordHash === btoa(password)) {
+            currentOwner = owner;
+            document.getElementById('ownerLoginSection').style.display = 'none';
+            document.getElementById('employeeLoginSection').style.display = 'none';
+            document.getElementById('ownerDashboard').style.display = 'block';
+            initOwnerDashboard();
+        } else {
+            document.getElementById('ownerLoginMsg').innerHTML = '<span style="color:red;">❌ Invalid email/mobile or password</span>';
+        }
+    };
+    
+    // Employee Login
+    function switchEmpMethod(method) {
+        currentEmpMethod = method;
+        document.getElementById('empEmailLoginDiv').style.display = method === 'email' ? 'block' : 'none';
+        document.getElementById('empMobileLoginDiv').style.display = method === 'mobile' ? 'block' : 'none';
+        const methods = document.querySelectorAll('#employeeLoginSection .login-method');
+        if(methods[0]) methods[0].classList.toggle('active', method === 'email');
+        if(methods[1]) methods[1].classList.toggle('active', method === 'mobile');
+    }
+    
+    document.getElementById('empLoginBtn').onclick = () => {
+        let identifier, foundEmployee = null, foundOwner = null;
+        if(currentEmpMethod === 'email') {
+            identifier = document.getElementById('empEmailLogin').value;
+            for(let owner of owners) {
+                const emp = owner.employees.find(e => e.email === identifier && e.isActive !== false);
+                if(emp) { foundEmployee = emp; foundOwner = owner; break; }
+            }
+        } else {
+            const code = document.getElementById('empCountryCode').value;
+            const mobile = document.getElementById('empMobileLogin').value;
+            identifier = code + mobile;
+            for(let owner of owners) {
+                const emp = owner.employees.find(e => e.mobile === identifier && e.isActive !== false);
+                if(emp) { foundEmployee = emp; foundOwner = owner; break; }
+            }
+        }
+        const password = document.getElementById('empPasswordLogin').value;
+        if(foundEmployee && foundEmployee.passwordHash === btoa(password)) {
+            currentEmployee = foundEmployee;
+            currentOwner = foundOwner;
+            document.getElementById('ownerLoginSection').style.display = 'none';
+            document.getElementById('employeeLoginSection').style.display = 'none';
+            document.getElementById('employeeDashboard').style.display = 'block';
+            initEmployeeDashboard();
+        } else {
+            document.getElementById('empLoginMsg').innerHTML = '<span style="color:red;">❌ Invalid credentials</span>';
+        }
+    };
+    
+    // Owner Dashboard Functions
+    function initOwnerDashboard() {
+        renderServicesList();
+        updateOwnerSelectors();
+        renderOwnerTables();
+        document.getElementById('addServiceBtn').onclick = addNewService;
+        document.getElementById('registerEmpBtn').onclick = registerEmployee;
+        document.getElementById('ownerAddWorkBtn').onclick = addOwnerWork;
+        document.getElementById('recordPaymentBtn').onclick = recordOwnerPayment;
+        document.getElementById('applyStatusBtn').onclick = () => {
+            const empId = document.getElementById('statusEmpSelect').value;
+            const action = document.getElementById('statusAction').value;
+            const date = document.getElementById('statusDate').value || getTodayStr();
+            const emp = currentOwner.employees.find(e => e.id === empId);
+            if(emp) {
+                if(action === 'leave') { emp.leavingDate = date; emp.isActive = false; }
+                else { emp.leavingDate = null; emp.isActive = true; }
+                saveOwners(); renderOwnerTables(); updateOwnerSelectors();
+                alert(`✅ Employee ${emp.name} ${action === 'leave' ? 'marked as left' : 're-joined'}!`);
+            } else { alert('Select employee'); }
+        };
+        document.querySelectorAll('#ownerDashboard .filter-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('#ownerDashboard .filter-btn').forEach(b=>b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.getAttribute('data-filter');
+                renderOwnerTables();
+            };
+        });
+        document.getElementById('ownerWorkDate').value = getTodayStr();
+        document.getElementById('paymentDate').value = getTodayStr();
+        document.getElementById('statusDate').value = getTodayStr();
+        document.getElementById('regJoiningDate').value = getTodayStr();
+    }
+    
+    async function registerEmployee() {
+        const name = document.getElementById('regFullName').value.trim();
+        if(!name) return alert("❌ Name required");
+        const email = document.getElementById('regEmail').value.trim();
+        const mobile = document.getElementById('regMobile').value.trim();
+        const password = document.getElementById('regPassword').value;
+        if(!email || !email.includes('@')) { alert("❌ Valid email required"); return; }
+        if(!mobile) { alert("❌ Mobile number required"); return; }
+        if(!password || password.length < 4) { alert("❌ Password must be at least 4 characters"); return; }
+        const photoFile = document.getElementById('regPhotoFile').files[0];
+        let photoData = null;
+        if(photoFile) photoData = await fileToBase64(photoFile);
+        const fullMobile = mobile.startsWith('+') ? mobile : '+91' + mobile;
+        currentOwner.employees.push({
+            id: "emp_" + Date.now(), name: name, email: email, mobile: fullMobile,
+            passwordHash: btoa(password), aadhar: document.getElementById('regAadhar').value,
+            father: document.getElementById('regFather').value, mother: document.getElementById('regMother').value,
+            presentAddr: document.getElementById('regPresentAddr').value, permAddr: document.getElementById('regPermAddr').value,
+            qualification: document.getElementById('regQualification').value,
+            joiningDate: document.getElementById('regJoiningDate').value || getTodayStr(),
+            leavingDate: null, isActive: true, photoData: photoData
+        });
+        saveOwners();
+        updateOwnerSelectors();
+        renderOwnerTables();
+        alert(`✅ Employee ${name} registered successfully!`);
+        document.getElementById('regFullName').value = '';
+        document.getElementById('regEmail').value = '';
+        document.getElementById('regMobile').value = '';
+        document.getElementById('regPassword').value = '';
+        document.getElementById('regPhotoFile').value = '';
+    }
+    
+    window.resetEmployeePassword = (empId) => {
+        const emp = currentOwner.employees.find(e => e.id === empId);
+        if(emp) {
+            const newPwd = prompt(`Reset password for ${emp.name}:`, "");
+            if(newPwd && newPwd.length >= 4) { emp.passwordHash = btoa(newPwd); saveOwners(); renderOwnerTables(); alert(`✅ Password reset!`); }
+            else if(newPwd) alert("Password min 4 chars");
+        }
+    };
+    
+    window.editEmployee = (empId) => {
+        const emp = currentOwner.employees.find(e => e.id === empId);
+        if(emp) { let nm = prompt("Edit Name:", emp.name); if(nm) emp.name = nm; saveOwners(); renderOwnerTables(); }
+    };
+    
+    window.deleteEmployee = (empId) => {
+        if(confirm("⚠️ Delete employee permanently? All work records will be lost!")) {
+            currentOwner.employees = currentOwner.employees.filter(e => e.id !== empId);
+            currentOwner.workEntries = currentOwner.workEntries.filter(w => w.employeeId !== empId);
+            currentOwner.paymentRecords = currentOwner.paymentRecords.filter(p => p.employeeId !== empId);
+            saveOwners(); renderOwnerTables(); updateOwnerSelectors();
+            alert("✅ Employee deleted!");
+        }
+    };
+    
+    window.rejoinEmployee = (empId) => {
+        const emp = currentOwner.employees.find(e => e.id === empId);
+        if(emp) { emp.leavingDate = null; emp.isActive = true; saveOwners(); renderOwnerTables(); alert(`✅ ${emp.name} re-joined!`); }
+    };
+    
+    function updateOwnerSelectors() {
+        const active = currentOwner.employees.filter(e => e.isActive !== false);
+        const options = active.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+        document.getElementById('ownerEmpSelect').innerHTML = options;
+        document.getElementById('paymentEmpSelect').innerHTML = '<option value="">Select</option>' + options;
+        document.getElementById('statusEmpSelect').innerHTML = '<option value="">Select</option>' + currentOwner.employees.map(e => `<option value="${e.id}">${e.name} ${!e.isActive ? '(Left)' : ''}</option>`).join('');
+        document.getElementById('ownerWorkSelect').innerHTML = currentOwner.servicesCatalog.map(s => `<option value="${s.name}" data-amt="${s.amount}">${s.name} - ₹${s.amount}</option>`).join('');
+        document.getElementById('empWorkSelect').innerHTML = currentOwner.servicesCatalog.map(s => `<option value="${s.name}" data-amt="${s.amount}">${s.name} - ₹${s.amount}</option>`).join('');
+    }
+    
+    function addOwnerWork() {
+        const empId = document.getElementById('ownerEmpSelect').value;
+        const emp = currentOwner.employees.find(e => e.id === empId);
+        if(!emp) return alert('❌ Select employee');
+        const workSel = document.getElementById('ownerWorkSelect');
+        currentOwner.workEntries.push({
+            id: Date.now()+Math.random(), employeeId: emp.id, employeeName: emp.name,
+            workName: workSel.value, amount: parseInt(workSel.options[workSel.selectedIndex].getAttribute('data-amt')),
+            date: document.getElementById('ownerWorkDate').value || getTodayStr(), time: getCurrentTime(),
+            customerName: document.getElementById('ownerCustName').value, customerPhone: document.getElementById('ownerCustPhone').value
+        });
+        saveOwners(); renderOwnerTables();
+        alert(`✅ Work added for ${emp.name}`);
+        document.getElementById('ownerCustName').value = ''; document.getElementById('ownerCustPhone').value = '';
+    }
+    
+    function recordOwnerPayment() {
+        const empId = document.getElementById('paymentEmpSelect').value;
+        const emp = currentOwner.employees.find(e => e.id === empId);
+        const amount = parseFloat(document.getElementById('paymentAmount').value);
+        if(!emp || isNaN(amount) || amount<=0) return alert('❌ Select employee and valid amount');
+        currentOwner.paymentRecords.push({
+            id: Date.now()+Math.random(), employeeId: emp.id, employeeName: emp.name, amount: amount,
+            date: document.getElementById('paymentDate').value || getTodayStr(),
+            type: document.getElementById('paymentType').value, mode: document.getElementById('paymentMode').value,
+            reference: document.getElementById('paymentRef').value, note: document.getElementById('paymentNote').value
+        });
+        saveOwners(); renderOwnerTables();
+        alert(`✅ Payment of ₹${amount} recorded for ${emp.name}`);
+        document.getElementById('paymentAmount').value = ''; document.getElementById('paymentRef').value = ''; document.getElementById('paymentNote').value = '';
+    }
+    
+    window.editWorkEntry = (id) => {
+        const entry = currentOwner.workEntries.find(w => w.id === id);
+        if(entry) { let amt = prompt("Edit amount:", entry.amount); if(amt && !isNaN(amt)) { entry.amount = parseFloat(amt); saveOwners(); renderOwnerTables(); alert("✅ Amount updated!"); } }
+    };
+    
+    window.deleteWorkEntry = (id) => {
+        if(confirm("Delete this work entry?")) { currentOwner.workEntries = currentOwner.workEntries.filter(w => w.id !== id); saveOwners(); renderOwnerTables(); alert("✅ Work entry deleted!"); }
+    };
+    
+    function renderOwnerTables() {
+        document.getElementById('ownerEmployeeList').innerHTML = currentOwner.employees.map(e => `
+            <div style="border:1px solid #e2e8f0; border-radius:20px; padding:15px; margin-bottom:15px;">
+                <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+                    <div class="profile-avatar" style="width:60px;height:60px;">${e.photoData ? `<img src="${e.photoData}">` : `<span>${e.name.charAt(0)}</span>`}</div>
+                    <div><strong>${e.name}</strong><br>📧 ${e.email}<br>📱 ${e.mobile}</div>
+                    <div><span class="badge ${e.leavingDate ? 'badge-danger' : 'badge-success'}">${e.leavingDate ? 'Left on ' + e.leavingDate : 'Active'}</span></div>
+                    <div><button class="btn-info" style="padding:6px 12px;" onclick="editEmployee('${e.id}')">✏️ Edit</button><button class="btn-warning" style="padding:6px 12px;" onclick="resetEmployeePassword('${e.id}')">🔑 Reset</button><button class="btn-danger" style="padding:6px 12px;" onclick="deleteEmployee('${e.id}')">🗑️ Delete</button>${!e.isActive ? `<button class="btn-success" style="padding:6px 12px;" onclick="rejoinEmployee('${e.id}')">🔄 Rejoin</button>` : ''}</div>
+                </div>
+            </div>`).join('');
+        
+        let filtered = currentOwner.workEntries.filter(e => {
+            if(currentFilter === 'today') return e.date === getTodayStr();
+            if(currentFilter === 'month') { let d=new Date(e.date), n=new Date(); return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear(); }
+            if(currentFilter === 'year') return new Date(e.date).getFullYear() === new Date().getFullYear();
+            return true;
+        });
+        
+        document.getElementById('ownerEntriesBody').innerHTML = filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i)=>`<tr><td>${i+1}</td><td>${e.date}</td><td>${e.time||'-'}</td><td>${e.employeeName}</td><td>${e.workName}</td><td>₹${e.amount}</td><td>${e.customerName||'—'}</td><td>${e.customerPhone||'—'}</td><td><button class="btn-primary" style="padding:4px 10px;" onclick="editWorkEntry(${e.id})">✏️</button> <button class="btn-danger" style="padding:4px 10px;" onclick="deleteWorkEntry(${e.id})">🗑️</button></td></tr>`).join('');
+        if(filtered.length === 0) document.getElementById('ownerEntriesBody').innerHTML = '<tr><td colspan="9" style="text-align:center;">No work entries found</td></tr>';
+        
+        document.getElementById('ownerPaymentBody').innerHTML = currentOwner.paymentRecords.slice().reverse().map(p => `<tr><td>${p.date}</td><td>${p.employeeName}</td><td>₹${p.amount}</td><td>${p.type||'Salary'}</td><td>${p.mode||'-'}</td><td>${p.reference||'-'}</td><td>${p.note||'-'}</td></tr>`).join('');
+        
+        const todayTasks = currentOwner.workEntries.filter(e=>e.date===getTodayStr()).length;
+        const monthEarn = currentOwner.workEntries.filter(e=>{let d=new Date(e.date), n=new Date(); return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();}).reduce((s,e)=>s+e.amount,0);
+        const totalPaid = currentOwner.paymentRecords.reduce((s,p)=>s+p.amount,0);
+        const totalEarned = currentOwner.workEntries.reduce((s,e)=>s+e.amount,0);
+        
+        document.getElementById('ownerStatsGrid').innerHTML = `<div class="stats-grid"><div class="stat-card"><div class="stat-label">📆 Today Tasks</div><div class="stat-value">${todayTasks}</div></div><div class="stat-card"><div class="stat-label">🏆 Month Earnings</div><div class="stat-value">₹${monthEarn}</div></div><div class="stat-card"><div class="stat-label">💰 Total Paid</div><div class="stat-value">₹${totalPaid}</div></div><div class="stat-card"><div class="stat-label">💸 Pending Balance</div><div class="stat-value">₹${totalEarned - totalPaid}</div></div></div>`;
+        
+        let summaryHtml = '<table class="data-table"><thead><tr><th>Employee</th><th>Total Earned</th><th>Total Paid</th><th>Pending</th><th>Tasks</th></tr></thead><tbody>';
+        currentOwner.employees.forEach(emp => {
+            const earned = currentOwner.workEntries.filter(w=>w.employeeId===emp.id).reduce((s,w)=>s+w.amount,0);
+            const paid = currentOwner.paymentRecords.filter(p=>p.employeeId===emp.id).reduce((s,p)=>s+p.amount,0);
+            summaryHtml += `<tr><td>${emp.name}</td><td>₹${earned}</td><td>₹${paid}</td><td style="color:${earned-paid>=0?'#2c9f6e':'#dc2626'}">₹${earned-paid}</td><td>${currentOwner.workEntries.filter(w=>w.employeeId===emp.id).length}</td></tr>`;
+        });
+        summaryHtml += '</tbody></table>';
+        document.getElementById('ownerSummaryDiv').innerHTML = summaryHtml;
+        
+        if(ownerChart) ownerChart.destroy();
+        ownerChart = new Chart(document.getElementById('ownerChart').getContext('2d'), { type: 'bar', data: { labels: currentOwner.employees.map(e=>e.name), datasets: [{ label: 'Total Earnings (₹)', data: currentOwner.employees.map(e=>currentOwner.workEntries.filter(w=>w.employeeId===e.id).reduce((s,w)=>s+w.amount,0)), backgroundColor: '#2c9f6e', borderRadius: 10 }] }, options: { responsive: true, animation: { duration: 1500 } } });
+    }
+    
+    // Employee Dashboard
+    function initEmployeeDashboard() {
+        document.getElementById('empProfileDisplay').innerHTML = `<div class="profile-preview"><div class="profile-avatar">${currentEmployee.photoData ? `<img src="${currentEmployee.photoData}">` : `<span>${currentEmployee.name.charAt(0)}</span>`}</div><div class="profile-info"><p><strong>${currentEmployee.name}</strong></p><p>📧 ${currentEmployee.email} | 📱 ${currentEmployee.mobile}</p><p>👨 Father: ${currentEmployee.father || '-'} | 👩 Mother: ${currentEmployee.mother || '-'}</p><p>📍 Present: ${currentEmployee.presentAddr || '-'}<br>🏠 Permanent: ${currentEmployee.permAddr || '-'}</p><p>🎓 ${currentEmployee.qualification || '-'} | 📅 Joined: ${currentEmployee.joiningDate}</p></div></div>`;
+        document.getElementById('empOwnerInfo').innerHTML = `<div class="profile-preview" style="background: linear-gradient(135deg, #dbeafe, #eff6ff);"><div class="profile-avatar" style="background: linear-gradient(135deg, #3b82f6, #1e40af); width:70px;height:70px; font-size:28px;">🏢</div><div class="profile-info"><p><strong>${currentOwner.businessName}</strong></p><p>👑 Owner: ${currentOwner.name}</p><p>📧 ${currentOwner.email} | 📱 ${currentOwner.mobile}</p><p><span class="badge badge-info">Your Organization</span></p></div></div>`;
+        document.getElementById('empWorkSelect').innerHTML = currentOwner.servicesCatalog.map(s=>`<option value="${s.name}" data-amt="${s.amount}">${s.name} - ₹${s.amount}</option>`).join('');
+        document.getElementById('empWorkDate').value = getTodayStr();
+        document.getElementById('empWorkTime').value = getCurrentTime();
+        document.getElementById('empSubmitWorkBtn').onclick = () => {
+            const ws = document.getElementById('empWorkSelect');
+            currentOwner.workEntries.push({ id: Date.now()+Math.random(), employeeId: currentEmployee.id, employeeName: currentEmployee.name, workName: ws.value, amount: parseInt(ws.options[ws.selectedIndex].getAttribute('data-amt')), date: getTodayStr(), time: getCurrentTime(), customerName: document.getElementById('empCustName').value, customerPhone: document.getElementById('empCustPhone').value });
+            saveOwners(); renderEmployeeView(); alert("✅ Work submitted!"); document.getElementById('empCustName').value = ''; document.getElementById('empCustPhone').value = ''; document.getElementById('empWorkTime').value = getCurrentTime();
+        };
+        renderEmployeeView();
+    }
+    
+    function renderEmployeeView() {
+        const myEntries = currentOwner.workEntries.filter(e => e.employeeId === currentEmployee.id);
+        document.getElementById('empEntriesBody').innerHTML = myEntries.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e => `<tr><td>${e.date}</td><td>${e.time||'-'}</td><td>${e.workName}</td><td><span class="badge badge-info">₹${e.amount}</span></td><td>${e.customerName||'—'}</td><td>${e.customerPhone||'—'}</td></tr>`).join('');
+        const todayEntries = myEntries.filter(e=>e.date===getTodayStr());
+        const monthEntries = myEntries.filter(e=>{let d=new Date(e.date), n=new Date(); return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();});
+        const totalPaid = currentOwner.paymentRecords.filter(p=>p.employeeId===currentEmployee.id).reduce((s,p)=>s+p.amount,0);
+        const totalEarned = myEntries.reduce((s,e)=>s+e.amount,0);
+        const pending = totalEarned - totalPaid;
+        document.getElementById('empStatsGrid').innerHTML = `<div class="stats-grid"><div class="stat-card"><div class="stat-label">📆 Today</div><div class="stat-value">${todayEntries.length}</div><div>Earned: ₹${todayEntries.reduce((s,e)=>s+e.amount,0)}</div></div><div class="stat-card"><div class="stat-label">💰 Received</div><div class="stat-value">₹${totalPaid}</div></div><div class="stat-card"><div class="stat-label">⚖️ Pending</div><div class="stat-value">₹${pending}</div></div><div class="stat-card"><div class="stat-label">🏆 Month</div><div class="stat-value">₹${monthEntries.reduce((s,e)=>s+e.amount,0)}</div></div></div>`;
+        document.getElementById('empPayHistoryBody').innerHTML = currentOwner.paymentRecords.filter(p=>p.employeeId===currentEmployee.id).map(p => `<tr><td>${p.date}</td><td><span class="badge badge-success">₹${p.amount}</span></td><td>${p.type||'Salary'}</td><td>${p.mode||'-'}</td><td>${p.reference||'-'}</td><td>${p.note||'-'}</td></tr>`).join('');
+        if(empEarningChart) empEarningChart.destroy();
+        if(empPendingChart) empPendingChart.destroy();
+        const last7Days = [...Array(7)].map((_,i)=>{ let d=new Date(); d.setDate(d.getDate()-i); return d.toISOString().slice(0,10); }).reverse();
+        const dailyEarnings = last7Days.map(date => myEntries.filter(e=>e.date===date).reduce((s,e)=>s+e.amount,0));
+        empEarningChart = new Chart(document.getElementById('empEarningChart').getContext('2d'), { type: 'line', data: { labels: last7Days, datasets: [{ label: 'Daily Earnings (₹)', data: dailyEarnings, borderColor: '#2c9f6e', backgroundColor: 'rgba(44,159,110,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, animation: { duration: 1500 } } });
+        empPendingChart = new Chart(document.getElementById('empPendingChart').getContext('2d'), { type: 'doughnut', data: { labels: ['Received (₹' + totalPaid + ')', 'Pending (₹' + pending + ')'], datasets: [{ data: [totalPaid, pending], backgroundColor: ['#2c9f6e', '#f59e0b'], borderWidth: 0 }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } }, animation: { animateRotate: true, duration: 1500 } } });
+    }
+    
+    // Global Logout
+    document.getElementById('globalLogoutBtn').onclick = () => { location.reload(); };
+    
+    // Make functions global
+    window.switchOwnerMethod = switchOwnerMethod;
+    window.switchEmpMethod = switchEmpMethod;
+    window.showOwnerForgotModal = showOwnerForgotModal;
+    window.showEmpForgotModal = showEmpForgotModal;
+    window.closeModal = closeModal;
+    window.sendResetCode = sendResetCode;
+    window.verifyResetCode = verifyResetCode;
+    window.showRegisterOwnerModal = showRegisterOwnerModal;
+    window.closeRegisterModal = closeRegisterModal;
+    window.registerNewOwner = registerNewOwner;
+    window.editEmployee = editEmployee;
+    window.resetEmployeePassword = resetEmployeePassword;
+    window.deleteEmployee = deleteEmployee;
+    window.rejoinEmployee = rejoinEmployee;
+    window.editWorkEntry = editWorkEntry;
+    window.deleteWorkEntry = deleteWorkEntry;
+    window.updateService = updateService;
+    window.deleteService = deleteService;
+    
+    loadData();
+    switchOwnerMethod('email');
+    switchEmpMethod('email');
+    
+    for(let i=0;i<50;i++){ let span=document.createElement('span'); span.style.left=Math.random()*100+'%'; span.style.animationDelay=Math.random()*20+'s'; span.style.animationDuration=15+Math.random()*20+'s'; span.style.width=span.style.height=20+Math.random()*60+'px'; document.getElementById('animatedBg').appendChild(span); }
+</script>
+</body>
+</html>
