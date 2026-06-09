@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>KJRSEVA HRMS - Complete Employee Management System</title>
+    <title>KJRSEVA HRMS - Premium Employee Management</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -23,6 +23,7 @@
             overflow-x: hidden;
         }
 
+        /* Animated Background */
         .animated-bg {
             position: fixed;
             top: 0;
@@ -34,9 +35,9 @@
         }
         .animated-bg span {
             position: absolute;
-            width: 80px;
-            height: 80px;
-            background: rgba(44, 159, 110, 0.05);
+            width: 60px;
+            height: 60px;
+            background: rgba(44, 159, 110, 0.08);
             border-radius: 50%;
             animation: float 20s infinite linear;
         }
@@ -53,6 +54,7 @@
             z-index: 1;
         }
 
+        /* Header Animation */
         .header {
             display: flex;
             justify-content: space-between;
@@ -64,6 +66,11 @@
             backdrop-filter: blur(10px);
             padding: 15px 25px;
             border-radius: 60px;
+            animation: slideDown 0.6s ease-out;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .header h1 {
@@ -73,6 +80,11 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            animation: glow 3s ease-in-out infinite;
+        }
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 5px rgba(44,159,110,0.3); }
+            50% { text-shadow: 0 0 20px rgba(44,159,110,0.6); }
         }
 
         .logout-btn {
@@ -84,10 +96,11 @@
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
         }
-        .logout-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(220,38,38,0.4); }
+        .logout-btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 25px rgba(220,38,38,0.4); }
 
+        /* Card Animation */
         .card {
             background: rgba(255,255,255,0.95);
             backdrop-filter: blur(10px);
@@ -95,46 +108,89 @@
             padding: 28px;
             margin-bottom: 28px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            transition: all 0.4s;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             border: 1px solid rgba(255,255,255,0.2);
+            animation: fadeInUp 0.5s ease-out;
+            animation-fill-mode: both;
         }
-        .card:hover { transform: translateY(-5px); }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card:hover { transform: translateY(-5px) scale(1.01); box-shadow: 0 30px 60px rgba(0,0,0,0.15); }
 
+        /* Form Grids */
         .form-grid, .form-grid-3col { display: grid; gap: 20px; }
         .form-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
         .form-grid-3col { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 
-        .input-group { display: flex; flex-direction: column; gap: 8px; }
-        .input-group label { font-weight: 600; font-size: 0.85rem; color: #1f5e7a; }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .input-group label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1f5e7a;
+            letter-spacing: 0.5px;
+        }
 
         input, select, textarea {
             padding: 12px 16px;
             border-radius: 28px;
             border: 2px solid #e2e8f0;
             font-size: 0.9rem;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             background: white;
         }
         input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #2c9f6e;
             box-shadow: 0 0 0 3px rgba(44,159,110,0.2);
+            transform: scale(1.01);
         }
 
+        /* Button Animations */
         button {
             padding: 12px 20px;
             border-radius: 50px;
             border: none;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+        button:active::after {
+            width: 100px;
+            height: 100px;
         }
         .btn-primary { background: linear-gradient(135deg, #1f5e7a, #0f445c); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(31,94,122,0.4); }
         .btn-danger { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+        .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(220,38,38,0.4); }
         .btn-success { background: linear-gradient(135deg, #2c9f6e, #1e7a54); color: white; }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(44,159,110,0.4); }
         .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .btn-warning:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245,158,11,0.4); }
         .btn-info { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+        .btn-info:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59,130,246,0.4); }
 
+        /* Stats Cards Animation */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -146,8 +202,13 @@
             padding: 25px;
             border-radius: 28px;
             text-align: center;
-            transition: all 0.4s;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             cursor: pointer;
+            animation: pulseGlow 3s infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 5px 15px rgba(44,159,110,0.1); }
+            50% { box-shadow: 0 8px 25px rgba(44,159,110,0.25); }
         }
         .stat-card:hover { transform: translateY(-8px) scale(1.02); }
         .stat-card .stat-value {
@@ -158,6 +219,11 @@
             background-clip: text;
             color: transparent;
             margin-top: 10px;
+            animation: countUp 0.8s ease-out;
+        }
+        @keyframes countUp {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
         }
         .stat-card .stat-label { font-size: 14px; color: #4a6a7a; font-weight: 600; }
 
@@ -167,8 +233,11 @@
             padding: 20px;
             background: white;
             border-radius: 28px;
+            transition: transform 0.3s ease;
         }
+        .chart-container:hover { transform: scale(1.02); }
 
+        /* Filter Buttons */
         .filter-bar {
             display: flex;
             flex-wrap: wrap;
@@ -183,14 +252,16 @@
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: 600;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
         }
+        .filter-btn:hover { transform: translateY(-2px); }
         .filter-btn.active {
             background: linear-gradient(135deg, #1f5e7a, #0f445c);
             color: white;
             transform: scale(1.05);
         }
 
+        /* Tables */
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -209,8 +280,12 @@
             position: sticky;
             top: 0;
         }
-        .data-table tr:hover { background: #f8fafc; transition: 0.2s; }
+        .data-table tr {
+            transition: all 0.2s ease;
+        }
+        .data-table tr:hover { background: #f8fafc; transform: scale(1.01); }
 
+        /* Profile Preview */
         .profile-preview {
             display: flex;
             gap: 25px;
@@ -219,6 +294,7 @@
             background: linear-gradient(135deg, #f8fafc, #f1f5f9);
             padding: 25px;
             border-radius: 28px;
+            animation: fadeIn 0.5s ease-out;
         }
         .profile-avatar {
             width: 100px;
@@ -232,12 +308,28 @@
             font-size: 42px;
             font-weight: bold;
             overflow: hidden;
+            transition: transform 0.3s ease;
+            animation: bounceIn 0.6s ease-out;
         }
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .profile-avatar:hover { transform: scale(1.05) rotate(5deg); }
         .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        .login-prompt { text-align: center; padding: 40px; }
-        .forgot-link { color: #3b82f6; cursor: pointer; font-size: 12px; margin-top: 10px; display: inline-block; }
-        
+        /* Login Section */
+        .login-prompt { text-align: center; padding: 40px; animation: fadeInScale 0.6s ease-out; }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .forgot-link { color: #3b82f6; cursor: pointer; font-size: 12px; margin-top: 10px; display: inline-block; transition: all 0.3s; }
+        .forgot-link:hover { text-decoration: underline; transform: translateX(5px); }
+
+        /* Modal Animation */
         .modal {
             display: none;
             position: fixed;
@@ -249,6 +341,7 @@
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            animation: fadeIn 0.3s ease-out;
         }
         .modal-content {
             background: white;
@@ -257,17 +350,26 @@
             max-width: 500px;
             width: 90%;
             text-align: center;
+            animation: modalSlideIn 0.4s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-50px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .close-modal {
             float: right;
             cursor: pointer;
             font-size: 24px;
+            transition: all 0.3s;
         }
+        .close-modal:hover { transform: rotate(90deg); }
 
-        .badge { padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 600; display: inline-block; }
+        /* Badges */
+        .badge { padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 600; display: inline-block; transition: all 0.3s; }
         .badge-success { background: #d1fae5; color: #065f46; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-info { background: #dbeafe; color: #1e40af; }
+        
         .security-note {
             background: #e0f2fe;
             padding: 10px 20px;
@@ -275,7 +377,13 @@
             font-size: 12px;
             text-align: center;
             margin: 15px 0;
+            animation: pulse 2s infinite;
         }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
         .login-tab {
             display: flex;
             gap: 10px;
@@ -287,10 +395,26 @@
             border-radius: 50px;
             cursor: pointer;
             background: #e2e8f0;
+            transition: all 0.3s ease;
         }
+        .login-method:hover { transform: translateY(-2px); }
         .login-method.active {
             background: #2c9f6e;
             color: white;
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
@@ -424,7 +548,7 @@
         <div class="card"><div class="filter-bar"><button class="filter-btn active" data-filter="today">Today</button><button class="filter-btn" data-filter="month">Month</button><button class="filter-btn" data-filter="year">Year</button><button class="filter-btn" data-filter="all">All</button></div>
             <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Sl</th><th>Date</th><th>Time</th><th>Employee</th><th>Work</th><th>Amount</th><th>Customer</th><th>Phone</th><th>Actions</th></tr></thead><tbody id="ownerEntriesBody"></tbody></table></div>
         </div>
-        <div class="card"><h3>💰 Payment History</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Employee</th><th>Amount</th><th>Type</th><th>Mode</th><th>Ref</th><th>Note</th></tr></thead><tbody id="ownerPaymentBody"></tbody></table></div></div>
+        <div class="card"><h3>💰 Payment History</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Employee</th><th>Amount</th><th>Type</th><th>Mode</th><th>Ref</th><th>Note</th></tr></thead><tbody id="ownerPaymentBody"></tbody><table></div></div>
         <div class="card"><h3>📋 Financial Summary</h3><div id="ownerSummaryDiv"></div></div>
     </div>
 
@@ -444,7 +568,7 @@
         </div>
         <div class="card"><h3>📊 My Performance</h3><div id="empStatsGrid"></div><div class="chart-container"><canvas id="empEarningChart"></canvas></div><div class="chart-container"><canvas id="empPendingChart"></canvas></div></div>
         <div class="card"><h3>📋 My Work History</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Amount</th><th>Customer</th><th>Phone</th></tr></thead><tbody id="empEntriesBody"></tbody></table></div></div>
-        <div class="card"><h3>💰 My Payments</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Mode</th><th>Ref</th><th>Note</th></tr></thead><tbody id="empPayHistoryBody"></tbody><tr></div></div>
+        <div class="card"><h3>💰 My Payments</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Mode</th><th>Ref</th><th>Note</th></tr></thead><tbody id="empPayHistoryBody"></tbody></table></div></div>
     </div>
 </div>
 
@@ -476,7 +600,7 @@
     ];
     
     function loadData() {
-        const stored = localStorage.getItem('kjr_working_system_v5');
+        const stored = localStorage.getItem('kjr_working_system_v7');
         if(stored) {
             owners = JSON.parse(stored);
         } else {
@@ -499,7 +623,30 @@
     }
     
     function saveOwners() {
-        localStorage.setItem('kjr_working_system_v5', JSON.stringify(owners));
+        localStorage.setItem('kjr_working_system_v7', JSON.stringify(owners));
+        showNotification('Data saved successfully!', 'success');
+    }
+    
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#2c9f6e' : '#dc2626'};
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            z-index: 9999;
+            animation: slideInRight 0.5s ease-out;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.5s ease-out';
+            setTimeout(() => notification.remove(), 500);
+        }, 3000);
     }
     
     function getTodayStr() { return new Date().toISOString().slice(0,10); }
@@ -535,6 +682,7 @@
             document.getElementById('ownerDashboard').style.display = 'block';
             document.getElementById('globalLogoutBtn').style.display = 'block';
             initOwnerDashboard();
+            showNotification('Welcome back, ' + owner.name + '!', 'success');
         } else {
             document.getElementById('ownerLoginMsg').innerHTML = '<span style="color:red;">❌ Invalid email/mobile or password</span>';
         }
@@ -577,12 +725,14 @@
             document.getElementById('employeeDashboard').style.display = 'block';
             document.getElementById('globalLogoutBtn').style.display = 'block';
             initEmployeeDashboard();
+            showNotification('Welcome back, ' + foundEmployee.name + '!', 'success');
         } else {
             document.getElementById('empLoginMsg').innerHTML = '<span style="color:red;">❌ Invalid credentials</span>';
         }
     };
     
-    function registerNewOwner() {
+    // REGISTER NEW OWNER - FULLY WORKING
+    window.registerNewOwner = function() {
         const name = document.getElementById('newOwnerName').value.trim();
         const email = document.getElementById('newOwnerEmail').value.trim();
         const mobile = document.getElementById('newOwnerMobile').value.trim();
@@ -590,35 +740,52 @@
         const business = document.getElementById('newOwnerBusiness').value.trim();
         
         if(!name || !email || !mobile || !password || !business) {
-            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">All fields required</span>';
+            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">❌ All fields required</span>';
             return;
         }
         if(password.length < 4) {
-            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">Password min 4 chars</span>';
+            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">❌ Password must be at least 4 characters</span>';
             return;
         }
         if(owners.find(o => o.email === email || o.mobile === mobile)) {
-            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">Owner already exists</span>';
+            document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:red;">❌ Owner already exists with this email or mobile</span>';
             return;
         }
         
-        owners.push({
+        const newOwner = {
             id: "owner_" + Date.now(),
-            name: name, email: email, mobile: mobile,
-            passwordHash: btoa(password), businessName: business,
+            name: name,
+            email: email,
+            mobile: mobile,
+            passwordHash: btoa(password),
+            businessName: business,
             servicesCatalog: JSON.parse(JSON.stringify(servicesCatalog)),
-            employees: [], workEntries: [], paymentRecords: []
-        });
+            employees: [],
+            workEntries: [],
+            paymentRecords: []
+        };
+        
+        owners.push(newOwner);
         saveOwners();
-        document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:green;">✅ Business registered! You can now login.</span>';
-        setTimeout(() => { 
+        
+        document.getElementById('registerOwnerMsg').innerHTML = '<span style="color:green;">✅ Business registered successfully! Redirecting to login...</span>';
+        
+        setTimeout(() => {
             document.getElementById('registerOwnerModal').style.display = 'none';
+            document.getElementById('registerOwnerMsg').innerHTML = '';
+            showNotification('Registration successful! Please login with your credentials.', 'success');
             location.reload();
         }, 2000);
-    }
+    };
     
-    function showRegisterOwnerModal() { document.getElementById('registerOwnerModal').style.display = 'flex'; }
-    function closeRegisterModal() { document.getElementById('registerOwnerModal').style.display = 'none'; }
+    window.showRegisterOwnerModal = function() {
+        document.getElementById('registerOwnerModal').style.display = 'flex';
+    };
+    
+    window.closeRegisterModal = function() {
+        document.getElementById('registerOwnerModal').style.display = 'none';
+        document.getElementById('registerOwnerMsg').innerHTML = '';
+    };
     
     function initOwnerDashboard() {
         updateOwnerSelectors();
@@ -719,7 +886,7 @@
     
     function renderOwnerTables() {
         document.getElementById('ownerEmployeeList').innerHTML = currentOwner.employees.map(e => `
-            <div style="border:1px solid #e2e8f0; border-radius:20px; padding:15px; margin-bottom:15px;">
+            <div style="border:1px solid #e2e8f0; border-radius:20px; padding:15px; margin-bottom:15px; transition: all 0.3s;">
                 <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
                     <div class="profile-avatar" style="width:60px;height:60px;">${e.photoData ? `<img src="${e.photoData}">` : `<span>${e.name.charAt(0)}</span>`}</div>
                     <div><strong>${e.name}</strong><br>📧 ${e.email}<br>📱 ${e.mobile}</div>
@@ -734,16 +901,27 @@
             return true;
         });
         
-        document.getElementById('ownerEntriesBody').innerHTML = filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i)=>`</td>
-            <td>${i+1}</td><td>${e.date}</td><td>${e.time||'-'}</td><td>${e.employeeName}</td><td>${e.workName}</td>
-            <td>₹${e.amount}</td><td>${e.customerName||'—'}</td><td>${e.customerPhone||'—'}</td>
+        document.getElementById('ownerEntriesBody').innerHTML = filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i)=>`<tr>
+            <td>${i+1}</td>
+            <td>${e.date}</td>
+            <td>${e.time||'-'}</td>
+            <td>${e.employeeName}</td>
+            <td>${e.workName}</td>
+            <td>₹${e.amount}</td>
+            <td>${e.customerName||'—'}</td>
+            <td>${e.customerPhone||'—'}</td>
             <td><button class="btn-primary" style="padding:4px 10px;" onclick="editWorkEntry(${e.id})">✏️</button> <button class="btn-danger" style="padding:4px 10px;" onclick="deleteWorkEntry(${e.id})">🗑️</button></td>
-        </tr>`).join('');
-        if(filtered.length === 0) document.getElementById('ownerEntriesBody').innerHTML = '<tr><td colspan="9" style="text-align:center;">No work entries found</td></tr>';
+        </table>`).join('');
+        if(filtered.length === 0) document.getElementById('ownerEntriesBody').innerHTML = '<tr><td colspan="9" style="text-align:center;">No work entries found</tr>';
         
         document.getElementById('ownerPaymentBody').innerHTML = currentOwner.paymentRecords.slice().reverse().map(p => `<tr>
-            <td>${p.date}</td><td>${p.employeeName}</td><td>₹${p.amount}</td><td>${p.type||'Salary'}</td><td>${p.mode||'-'}</td>
-            <td>${p.reference||'-'}</td><td>${p.note||'-'}</td>
+            <td>${p.date}</td>
+            <td>${p.employeeName}</td>
+            <td>₹${p.amount}</td>
+            <td>${p.type||'Salary'}</td>
+            <td>${p.mode||'-'}</td>
+            <td>${p.reference||'-'}</td>
+            <td>${p.note||'-'}</td>
         </tr>`).join('');
         
         const todayTasks = currentOwner.workEntries.filter(e=>e.date===getTodayStr()).length;
@@ -764,7 +942,13 @@
         currentOwner.employees.forEach(emp => {
             const earned = currentOwner.workEntries.filter(w=>w.employeeId===emp.id).reduce((s,w)=>s+w.amount,0);
             const paid = currentOwner.paymentRecords.filter(p=>p.employeeId===emp.id).reduce((s,p)=>s+p.amount,0);
-            summaryHtml += `<tr><td>${emp.name}</td><td>₹${earned}</td><td>₹${paid}</td><td style="color:${earned-paid>=0?'#2c9f6e':'#dc2626'}">₹${earned-paid}</td><td>${currentOwner.workEntries.filter(w=>w.employeeId===emp.id).length}</td></tr>`;
+            summaryHtml += `<tr>
+                <td>${emp.name}</td>
+                <td>₹${earned}</td>
+                <td>₹${paid}</td>
+                <td style="color:${earned-paid>=0?'#2c9f6e':'#dc2626'}; font-weight:bold;">₹${earned-paid}</td>
+                <td>${currentOwner.workEntries.filter(w=>w.employeeId===emp.id).length}</td>
+            </tr>`;
         });
         summaryHtml += '</tbody></table>';
         document.getElementById('ownerSummaryDiv').innerHTML = summaryHtml;
@@ -776,7 +960,7 @@
                 labels: currentOwner.employees.map(e=>e.name), 
                 datasets: [{ label: 'Total Earnings (₹)', data: currentOwner.employees.map(e=>currentOwner.workEntries.filter(w=>w.employeeId===e.id).reduce((s,w)=>s+w.amount,0)), backgroundColor: '#2c9f6e', borderRadius: 10 }] 
             }, 
-            options: { responsive: true, animation: { duration: 1500 } } 
+            options: { responsive: true, animation: { duration: 1500, easing: 'easeOutBounce' } } 
         });
     }
     
@@ -818,7 +1002,12 @@
     function renderEmployeeView() {
         const myEntries = currentOwner.workEntries.filter(e => e.employeeId === currentEmployee.id);
         document.getElementById('empEntriesBody').innerHTML = myEntries.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e => `<tr>
-            <td>${e.date}</td><td>${e.time||'-'}</td><td>${e.workName}</td><td>₹${e.amount}</td><td>${e.customerName||'—'}</td><td>${e.customerPhone||'—'}</td>
+            <td>${e.date}</td>
+            <td>${e.time||'-'}</td>
+            <td>${e.workName}</td>
+            <td>₹${e.amount}</td>
+            <td>${e.customerName||'—'}</td>
+            <td>${e.customerPhone||'—'}</td>
         </tr>`).join('');
         const todayEntries = myEntries.filter(e=>e.date===getTodayStr());
         const monthEntries = myEntries.filter(e=>{let d=new Date(e.date), n=new Date(); return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();});
@@ -834,14 +1023,19 @@
             </div>
         `;
         document.getElementById('empPayHistoryBody').innerHTML = currentOwner.paymentRecords.filter(p=>p.employeeId===currentEmployee.id).map(p => `<tr>
-            <td>${p.date}</td><td>₹${p.amount}</td><td>${p.type||'Salary'}</td><td>${p.mode||'-'}</td><td>${p.reference||'-'}</td><td>${p.note||'-'}</td>
+            <td>${p.date}</td>
+            <td>₹${p.amount}</td>
+            <td>${p.type||'Salary'}</td>
+            <td>${p.mode||'-'}</td>
+            <td>${p.reference||'-'}</td>
+            <td>${p.note||'-'}</td>
         </tr>`).join('');
         
         if(empEarningChart) empEarningChart.destroy();
         if(empPendingChart) empPendingChart.destroy();
         const last7Days = [...Array(7)].map((_,i)=>{ let d=new Date(); d.setDate(d.getDate()-i); return d.toISOString().slice(0,10); }).reverse();
         const dailyEarnings = last7Days.map(date => myEntries.filter(e=>e.date===date).reduce((s,e)=>s+e.amount,0));
-        empEarningChart = new Chart(document.getElementById('empEarningChart').getContext('2d'), { type: 'line', data: { labels: last7Days, datasets: [{ label: 'Daily Earnings (₹)', data: dailyEarnings, borderColor: '#2c9f6e', backgroundColor: 'rgba(44,159,110,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, animation: { duration: 1500 } } });
+        empEarningChart = new Chart(document.getElementById('empEarningChart').getContext('2d'), { type: 'line', data: { labels: last7Days, datasets: [{ label: 'Daily Earnings (₹)', data: dailyEarnings, borderColor: '#2c9f6e', backgroundColor: 'rgba(44,159,110,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, animation: { duration: 1500, easing: 'easeOutElastic' } } });
         empPendingChart = new Chart(document.getElementById('empPendingChart').getContext('2d'), { type: 'doughnut', data: { labels: ['Received (₹' + totalPaid + ')', 'Pending (₹' + pending + ')'], datasets: [{ data: [totalPaid, pending], backgroundColor: ['#2c9f6e', '#f59e0b'], borderWidth: 0 }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } }, animation: { animateRotate: true, duration: 1500 } } });
     }
     
@@ -857,17 +1051,27 @@
     
     window.switchOwnerMethod = switchOwnerMethod;
     window.switchEmpMethod = switchEmpMethod;
-    window.showRegisterOwnerModal = showRegisterOwnerModal;
-    window.closeRegisterModal = closeRegisterModal;
-    window.registerNewOwner = registerNewOwner;
+    window.editWorkEntry = editWorkEntry;
+    window.deleteWorkEntry = deleteWorkEntry;
     
     loadData();
     switchOwnerMethod('email');
     switchEmpMethod('email');
     
     for(let i=0;i<50;i++){ let span=document.createElement('span'); span.style.left=Math.random()*100+'%'; span.style.animationDelay=Math.random()*20+'s'; span.style.animationDuration=15+Math.random()*20+'s'; span.style.width=span.style.height=20+Math.random()*60+'px'; document.getElementById('animatedBg').appendChild(span); }
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
 </script>
-</body>
-</html>
 </body>
 </html>
