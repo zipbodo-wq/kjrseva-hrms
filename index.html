@@ -2383,6 +2383,7 @@
                 <div class="card-header" style="flex-wrap:wrap;gap:8px;">
                     <h3><i class="fas fa-users" style="color:var(--secondary);"></i> Active Staff &amp; Team Members</h3>
                     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn btn-sm btn-secondary" onclick="refreshStaffNow()" title="Fetch latest staff from Google Sheet"><i class="fas fa-sync" id="refreshStaffIcon"></i> Refresh Staff</button>
                         <button class="btn btn-sm btn-info" onclick="copyStaffInviteLink()" title="Copy WhatsApp link for staff to log in on their mobile phones"><i class="fas fa-share-alt"></i> Share Staff Login Link</button>
                         <button class="btn btn-sm btn-success" onclick="openStaffBroadcastModal()" title="Send WhatsApp notification to staff"><i class="fab fa-whatsapp"></i> Staff WhatsApp Hub</button>
                         <span class="badge badge-info" id="employeeCountDisplay">Total: 0</span>
@@ -3288,7 +3289,8 @@
             }
         } catch (e) {}
 
-        const DEFAULT_CLOUD_URL = "";
+        const DEFAULT_CLOUD_URL = "https://script.google.com/macros/s/AKfycb.../exec";
+
         let cloudApiUrl = localStorage.getItem(CLOUD_STORAGE_KEY) || DEFAULT_CLOUD_URL;
 
         let owners = [],
@@ -3544,9 +3546,22 @@
         function updateSyncStatus(status, text) {
             const dot = document.getElementById('syncDot');
             const label = document.getElementById('syncText');
+            const box = document.getElementById('cloudSyncIndicator');
             if (dot && label) {
                 dot.className = 'sync-dot ' + status;
                 label.textContent = text;
+            }
+            if (box) {
+                if (!cloudApiUrl) {
+                    box.style.border = '1.5px solid #eab308';
+                    box.style.background = 'rgba(234,179,8,0.15)';
+                    box.title = 'Click to connect your Google Sheet cloud database';
+                    if (label) label.textContent = 'Cloud Sync: Local (Click to Connect)';
+                } else {
+                    box.style.border = '';
+                    box.style.background = '';
+                    box.title = 'Google Sheet Cloud Database Connected (Click for options)';
+                }
             }
         }
 
@@ -3678,6 +3693,58 @@
             } catch (err) {
                 console.warn('Initial cloud staff sync failed (offline or pending):', err);
             }
+        }
+
+        async function refreshStaffNow() {
+            const icon = document.getElementById('refreshStaffIcon');
+            if (icon) icon.classList.add('fa-spin');
+            if (!cloudApiUrl) {
+                showToast('💡 Please connect Google Sheet URL first', 'info');
+                openCloudConfigModal();
+                if (icon) icon.classList.remove('fa-spin');
+                return;
+            }
+            showToast('🔄 Fetching latest staff roster from Google Sheet...', 'info');
+            try {
+                const res = await fetch(cloudApiUrl + '?action=getAll');
+                const result = await res.json();
+                if (result.status === 'success' && result.data) {
+                    mergeCloudData(result.data);
+                    renderEmployeeList();
+                    updateOwnerSelectors();
+                    showToast(`✅ Staff updated! (${currentOwner.employees.length} team members)`, 'success');
+                } else {
+                    showToast('⚠️ Could not fetch staff list from cloud', 'warning');
+                }
+            } catch(e) {
+                showToast('❌ Refresh failed: ' + e.message, 'error');
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        }
+
+        // =============================================
+        // MULTI-DEVICE AUTO-REFRESH & LIVE SYNC ENGINE
+        // =============================================
+        let autoSyncTimer = null;
+        function startAutoSyncEngine() {
+            if (autoSyncTimer) clearInterval(autoSyncTimer);
+            autoSyncTimer = setInterval(async () => {
+                if (!cloudApiUrl || document.hidden) return;
+                try {
+                    const res = await fetch(cloudApiUrl + '?action=getAll');
+                    const result = await res.json();
+                    if (result.status === 'success' && result.data) {
+                        const prevStaffCount = (currentOwner && currentOwner.employees) ? currentOwner.employees.length : 0;
+                        mergeCloudData(result.data);
+                        const newStaffCount = (currentOwner && currentOwner.employees) ? currentOwner.employees.length : 0;
+                        if (newStaffCount > prevStaffCount && prevStaffCount > 0) {
+                            showToast(`👥 New staff member synced! (Total: ${newStaffCount})`, 'info');
+                            addNotification('👥 Staff Update', `Synced ${newStaffCount - prevStaffCount} new staff from cloud`, 'info');
+                        }
+                    }
+                } catch(e) {}
+            }, 10000); // Auto-refresh every 10 seconds across all PCs & mobile devices
         }
 
         async function syncAndRetryGoogleLogin(targetEmail) {
@@ -3962,6 +4029,13 @@
             if (!currentOwner.attendance) currentOwner.attendance = [];
             if (!currentOwner.leaveRequests) currentOwner.leaveRequests = [];
             if (!currentOwner.chatMessages) currentOwner.chatMessages = [];
+            if (!currentOwner.notifications || currentOwner.notifications.length === 0) {
+                currentOwner.notifications = [
+                    { id: Date.now() - 3000, title: '👋 Welcome to KJRSEVA Portal', body: 'Enterprise multi-device system is active.', type: 'success', time: new Date().toISOString(), unread: true },
+                    { id: Date.now() - 2000, title: '👥 Staff Management', body: 'Add staff or use "Share Staff Login Link" for 1-click mobile login.', type: 'info', time: new Date().toISOString(), unread: true },
+                    { id: Date.now() - 1000, title: '☁️ Google Sheet Cloud', body: 'Click Cloud Sync at top to link spreadsheet across all PCs.', type: 'warning', time: new Date().toISOString(), unread: true }
+                ];
+            }
 
             // Data integrity check: if owners[0].email was accidentally overwritten by a staff email during past Google login tests, restore it!
             if (currentOwner.employees && currentOwner.employees.some(e => e.email.toLowerCase().trim() === currentOwner.email.toLowerCase().trim())) {
@@ -6745,10 +6819,6 @@
             const inp = document.getElementById(id);
             inp.type = inp.type === 'password' ? 'text' : 'password';
         }
-        function toggleNotifications() {
-            const list = document.getElementById('notificationList');
-            if (list) list.style.display = list.style.display === 'block' ? 'none' : 'block';
-        }
         // =============================================
         // BUSINESS REGISTRATION & PASSWORD RECOVERY LOGIC
         // =============================================
@@ -7723,8 +7793,12 @@
             document.getElementById('themeIcon').className = 'fas fa-sun';
         }
 
+        updateNotificationBadge();
+        updateSyncStatus('', cloudApiUrl ? 'Cloud: Online 🟢' : 'Cloud Sync: Local (Click to Connect)');
+
         // Auto-sync latest staff roster from Google Sheets cloud in background
         syncStaffFromCloudOnBoot();
+        startAutoSyncEngine();
 
         console.log('✅ KJRSEVA HRMS 2.2 Enterprise Ready');
         console.log('✅ Google Identity Services Loaded');
