@@ -2383,6 +2383,7 @@
                 <div class="card-header" style="flex-wrap:wrap;gap:8px;">
                     <h3><i class="fas fa-users" style="color:var(--secondary);"></i> Active Staff &amp; Team Members</h3>
                     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn btn-sm btn-info" onclick="copyStaffInviteLink()" title="Copy WhatsApp link for staff to log in on their mobile phones"><i class="fas fa-share-alt"></i> Share Staff Login Link</button>
                         <button class="btn btn-sm btn-success" onclick="openStaffBroadcastModal()" title="Send WhatsApp notification to staff"><i class="fab fa-whatsapp"></i> Staff WhatsApp Hub</button>
                         <span class="badge badge-info" id="employeeCountDisplay">Total: 0</span>
                     </div>
@@ -2821,6 +2822,13 @@
                 <button class="btn btn-secondary" onclick="disconnectCloud()" style="padding:8px 14px;">Disconnect</button>
             </div>
             <div id="cloudTestMsg" style="margin-top:10px;font-size:12px;text-align:center;"></div>
+            <div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--border-color);">
+                <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">📲 STAFF WHATSAPP AUTO-CONNECT LINK</label>
+                <p style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.4;">
+                    Send this link to your staff (like Tilottama) on WhatsApp. When they tap it on their mobile phone, their phone will automatically link to your Google Sheet so Google Login works instantly!
+                </p>
+                <button class="btn btn-info" onclick="copyStaffInviteLink()" style="width:100%;justify-content:center;"><i class="fab fa-whatsapp"></i> Copy Staff WhatsApp Invite Link</button>
+            </div>
         </div>
     </div>
 
@@ -3266,7 +3274,22 @@
         // CONFIGURATION & STATE
         // =============================================
         const CLOUD_STORAGE_KEY = 'kjr_cloud_api_url';
-        let cloudApiUrl = localStorage.getItem(CLOUD_STORAGE_KEY) || '';
+
+        // Auto-detect ?cloud= or ?api= in URL query string (allows 1-click auto-connect on mobile phones)
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cloudParam = urlParams.get('cloud') || urlParams.get('api');
+            if (cloudParam) {
+                const cleanedUrl = decodeURIComponent(cloudParam).trim();
+                if (cleanedUrl.startsWith('http')) {
+                    localStorage.setItem(CLOUD_STORAGE_KEY, cleanedUrl);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        } catch (e) {}
+
+        const DEFAULT_CLOUD_URL = "";
+        let cloudApiUrl = localStorage.getItem(CLOUD_STORAGE_KEY) || DEFAULT_CLOUD_URL;
 
         let owners = [],
             currentOwner = null,
@@ -3527,6 +3550,23 @@
             }
         }
 
+        async function pushAllDataToCloud() {
+            if (!cloudApiUrl) return;
+            const ownerData = currentOwner || (owners && owners[0]);
+            if (!ownerData) return;
+            try {
+                await fetch(cloudApiUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'syncAll', data: ownerData })
+                });
+                console.log('✅ Full store state pushed to Google Sheet Cloud');
+            } catch (err) {
+                console.warn('pushAllDataToCloud warning:', err);
+            }
+        }
+
         async function triggerManualSync() {
             if (!cloudApiUrl) {
                 openCloudConfigModal();
@@ -3540,12 +3580,7 @@
             try {
                 // If owner, push our current local state to Google Sheet
                 if (isUserOwner()) {
-                    await fetch(cloudApiUrl, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'syncAll', data: currentOwner })
-                    });
+                    await pushAllDataToCloud();
                 }
 
                 // Fetch latest data from Google Sheet
@@ -3566,18 +3601,129 @@
         }
 
         function mergeCloudData(cloudData) {
+            if (!currentOwner && owners && owners[0]) currentOwner = owners[0];
             if (!currentOwner) return;
-            if (cloudData.workEntries) currentOwner.workEntries = cloudData.workEntries;
-            if (cloudData.paymentRecords) currentOwner.paymentRecords = cloudData.paymentRecords;
-            if (cloudData.paymentRequests) currentOwner.paymentRequests = cloudData.paymentRequests;
-            if (cloudData.attendance) currentOwner.attendance = cloudData.attendance;
-            if (cloudData.leaveRequests) currentOwner.leaveRequests = cloudData.leaveRequests;
-            if (cloudData.employees && isUserOwner()) currentOwner.employees = cloudData.employees;
+
+            if (cloudData.workEntries && Array.isArray(cloudData.workEntries)) currentOwner.workEntries = cloudData.workEntries;
+            if (cloudData.paymentRecords && Array.isArray(cloudData.paymentRecords)) currentOwner.paymentRecords = cloudData.paymentRecords;
+            if (cloudData.paymentRequests && Array.isArray(cloudData.paymentRequests)) currentOwner.paymentRequests = cloudData.paymentRequests;
+            if (cloudData.attendance && Array.isArray(cloudData.attendance)) currentOwner.attendance = cloudData.attendance;
+            if (cloudData.leaveRequests && Array.isArray(cloudData.leaveRequests)) currentOwner.leaveRequests = cloudData.leaveRequests;
+
+            if (cloudData.employees && Array.isArray(cloudData.employees) && cloudData.employees.length > 0) {
+                const localEmps = currentOwner.employees || [];
+                const mergedMap = new Map();
+
+                // Add cloud employees
+                cloudData.employees.forEach(emp => {
+                    const key = (emp.email || emp.id || '').toLowerCase().trim();
+                    if (key) mergedMap.set(key, emp);
+                });
+
+                // Add local employees (preserve newly registered ones)
+                localEmps.forEach(emp => {
+                    const key = (emp.email || emp.id || '').toLowerCase().trim();
+                    if (key) {
+                        if (!mergedMap.has(key)) {
+                            mergedMap.set(key, emp);
+                        } else {
+                            const cloudEmp = mergedMap.get(key);
+                            if (emp.photoData && !cloudEmp.photoData) cloudEmp.photoData = emp.photoData;
+                        }
+                    }
+                });
+
+                currentOwner.employees = Array.from(mergedMap.values());
+                if (owners[0]) owners[0].employees = currentOwner.employees;
+            }
+
             if (cloudData.chatMessages && Array.isArray(cloudData.chatMessages)) {
                 mergeChatMessages(cloudData.chatMessages);
             }
             saveOwners();
             refreshAllViews();
+        }
+
+        function copyStaffInviteLink() {
+            if (!cloudApiUrl) {
+                showToast('💡 Please connect your Google Sheet URL first', 'info');
+                openCloudConfigModal();
+                return;
+            }
+            const origin = window.location.origin;
+            const pathname = window.location.pathname;
+            const inviteUrl = `${origin}${pathname}?cloud=${encodeURIComponent(cloudApiUrl)}`;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(inviteUrl).then(() => {
+                    showToast('✅ Staff WhatsApp Login Link copied!', 'success');
+                    alert(`📲 Staff Login Link Copied!\n\nSend this link to Tilottama or any staff member on WhatsApp:\n\n${inviteUrl}\n\nWhen they open it on their mobile phone, their phone will automatically link to your Google Sheet database and allow 1-Click Google Login!`);
+                }).catch(() => {
+                    prompt('Copy this Staff Login Link and send to staff via WhatsApp:', inviteUrl);
+                });
+            } else {
+                prompt('Copy this Staff Login Link and send to staff via WhatsApp:', inviteUrl);
+            }
+        }
+
+        async function syncStaffFromCloudOnBoot() {
+            if (!cloudApiUrl) return;
+            try {
+                const res = await fetch(cloudApiUrl + '?action=getAll');
+                const result = await res.json();
+                if (result.status === 'success' && result.data) {
+                    mergeCloudData(result.data);
+                    console.log('✅ Synced staff roster from Google Sheet cloud on boot');
+                }
+            } catch (err) {
+                console.warn('Initial cloud staff sync failed (offline or pending):', err);
+            }
+        }
+
+        async function syncAndRetryGoogleLogin(targetEmail) {
+            if (!cloudApiUrl) {
+                showToast('⚠️ No Cloud URL configured', 'warning');
+                return;
+            }
+            showToast('🔄 Re-checking store database...', 'info');
+            try {
+                const res = await fetch(cloudApiUrl + '?action=getAll');
+                const result = await res.json();
+                if (result.status === 'success' && result.data) {
+                    mergeCloudData(result.data);
+                    showToast('✅ Roster updated! Tap "Sign in with Google" now.', 'success');
+                    const msgEl = document.getElementById('loginMsg');
+                    if (msgEl) msgEl.innerHTML = '<span style="color:#16a34a;font-weight:600;">✅ Staff roster updated! Please tap "Sign in with Google" button above now.</span>';
+                }
+            } catch (e) {
+                showToast('❌ Could not sync with Google Sheet: ' + e.message, 'error');
+            }
+        }
+
+        async function connectQuickCloudAndRetry(targetEmail) {
+            const input = document.getElementById('quickCloudUrlInput');
+            const url = input ? input.value.trim() : '';
+            if (!url || !url.startsWith('http')) {
+                showToast('❌ Please enter a valid Google Apps Script URL', 'error');
+                return;
+            }
+            cloudApiUrl = url;
+            localStorage.setItem(CLOUD_STORAGE_KEY, cloudApiUrl);
+            showToast('🔄 Connecting to Google Sheet...', 'info');
+            try {
+                const res = await fetch(cloudApiUrl + '?action=getAll');
+                const result = await res.json();
+                if (result.status === 'success' && result.data) {
+                    mergeCloudData(result.data);
+                    showToast('✅ Connected! Tap "Sign in with Google" again.', 'success');
+                    const msgEl = document.getElementById('loginMsg');
+                    if (msgEl) msgEl.innerHTML = '<span style="color:#16a34a;font-weight:600;">✅ Cloud connected! Please tap "Sign in with Google" button above now.</span>';
+                } else {
+                    showToast('⚠️ Connected, but no staff data returned yet', 'warning');
+                }
+            } catch (e) {
+                showToast('❌ Failed to fetch from cloud URL: ' + e.message, 'error');
+            }
         }
 
         function openCloudConfigModal() {
@@ -3607,6 +3753,7 @@
                     msg.innerHTML = '<span style="color:#16a34a;">✅ Connected! Cloud Database is Online!</span>';
                     updateSyncStatus('', 'Cloud: Online 🟢');
                     showToast('✅ Google Sheet Connected!', 'success');
+                    pushAllDataToCloud();
                     setTimeout(() => { closeCloudConfigModal(); triggerManualSync(); }, 1200);
                 } else {
                     throw new Error('Invalid response');
@@ -3617,7 +3764,8 @@
                 localStorage.setItem(CLOUD_STORAGE_KEY, cloudApiUrl);
                 msg.innerHTML = '<span style="color:#16a34a;">✅ URL Saved! Connecting in background...</span>';
                 updateSyncStatus('', 'Cloud: Connected 🟢');
-                setTimeout(() => { closeCloudConfigModal(); }, 1200);
+                pushAllDataToCloud();
+                setTimeout(() => { closeCloudConfigModal(); triggerManualSync(); }, 1200);
             }
         }
 
@@ -3632,7 +3780,7 @@
         // =============================================
         // GOOGLE IDENTITY SERVICES (OFFICIAL GOOGLE LOGIN)
         // =============================================
-        function handleGoogleLoginResponse(response) {
+        async function handleGoogleLoginResponse(response) {
             try {
                 // Decode Google ID Token payload
                 const base64Url = response.credential.split('.')[1];
@@ -3648,32 +3796,53 @@
 
                 console.log('✅ Google Sign-In attempt:', googleEmail, googleName);
 
-                // 1. ALWAYS CHECK REGISTERED STAFF FIRST!
-                // If this email was registered for an employee, ALWAYS log into that Staff profile!
-                let matchedEmp = null;
-                let matchedOwnerForEmp = null;
+                const msgEl = document.getElementById('loginMsg');
 
-                for (let o of owners) {
-                    if (o.employees && Array.isArray(o.employees)) {
-                        let emp = o.employees.find(e => (e.email || '').toLowerCase().trim() === googleEmail && e.isActive !== false);
-                        if (emp) {
-                            matchedEmp = emp;
-                            matchedOwnerForEmp = o;
-                            break;
+                // Helper to search staff across all owner accounts in memory
+                const findStaffInMemory = () => {
+                    for (let o of owners) {
+                        if (o.employees && Array.isArray(o.employees)) {
+                            let emp = o.employees.find(e => (e.email || '').toLowerCase().trim() === googleEmail && e.isActive !== false);
+                            if (emp) return { emp, owner: o };
                         }
+                    }
+                    return null;
+                };
+
+                let staffMatch = findStaffInMemory();
+
+                // If not found in local memory, check Google Sheets Cloud Backend!
+                if (!staffMatch && cloudApiUrl) {
+                    if (msgEl) {
+                        msgEl.innerHTML = `<div style="background:rgba(59,130,246,0.1);border:1.5px solid #3b82f6;border-radius:var(--radius-sm);padding:10px;margin-top:8px;text-align:left;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-spinner fa-spin" style="color:#3b82f6;"></i>
+                            <span style="font-size:12px;color:var(--text-primary);">Verifying ${googleEmail} with store Google Sheet database...</span>
+                        </div>`;
+                    }
+                    try {
+                        const res = await fetch(cloudApiUrl + '?action=getAll');
+                        const result = await res.json();
+                        if (result.status === 'success' && result.data) {
+                            mergeCloudData(result.data);
+                            staffMatch = findStaffInMemory();
+                        }
+                    } catch (netErr) {
+                        console.warn('Cloud verification error during Google Login:', netErr);
                     }
                 }
 
-                if (matchedEmp) {
+                // 1. ALWAYS CHECK REGISTERED STAFF FIRST!
+                // If this email was registered for an employee, ALWAYS log into that Staff profile!
+                if (staffMatch) {
                     currentRole = 'employee';
-                    currentOwner = matchedOwnerForEmp;
-                    currentEmployee = matchedEmp;
+                    currentOwner = staffMatch.owner;
+                    currentEmployee = staffMatch.emp;
                     if (googlePhoto) {
-                        matchedEmp.photoData = googlePhoto;
+                        currentEmployee.photoData = googlePhoto;
                     }
                     saveOwners();
                     loginSuccess();
-                    showToast(`👤 Welcome ${matchedEmp.name}! Logged into your Staff Portal.`, 'success');
+                    showToast(`👤 Welcome ${currentEmployee.name}! Logged into your Staff Portal.`, 'success');
                     return;
                 }
 
@@ -3704,16 +3873,34 @@
                 }
 
                 // 4. UNRECOGNIZED GOOGLE ACCOUNT: NEVER HIJACK OR PROMOTE TO OWNER!
-                const msgEl = document.getElementById('loginMsg');
-                const errMsg = `<div style="background:rgba(220,38,38,0.1);border:1.5px solid #dc2626;border-radius:var(--radius-sm);padding:10px;margin-top:8px;text-align:left;">
-                    <strong style="color:#dc2626;font-size:12px;">❌ Access Denied: Email Not Registered</strong>
-                    <p style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.4;">
-                        Google account <strong>${googleEmail}</strong> is not registered as Staff or Owner in this portal.<br>
-                        👉 <strong>If you are Staff:</strong> Ask the Owner to register your email in <em>Staff Management</em>.<br>
-                        👉 <strong>If you are Owner:</strong> Register your business via "Register Business" below.
-                    </p>
-                </div>`;
-                if (msgEl) msgEl.innerHTML = errMsg;
+                if (msgEl) {
+                    if (!cloudApiUrl) {
+                        msgEl.innerHTML = `<div style="background:rgba(234,179,8,0.1);border:1.5px solid #eab308;border-radius:var(--radius-sm);padding:12px;margin-top:8px;text-align:left;">
+                            <strong style="color:#b45309;font-size:12px;">⚠️ Google Sheet Cloud Not Connected on This Device</strong>
+                            <p style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.4;">
+                                You signed in with <strong>${googleEmail}</strong>, but this device does not know your store's Google Sheet URL yet.<br><br>
+                                👉 <strong>Easy Fix:</strong> Ask the Owner to send you the <strong>"Staff WhatsApp Link"</strong> from their Owner Dashboard.<br>
+                                👉 <strong>Or connect manually:</strong> Enter your Google Apps Script URL below:
+                            </p>
+                            <div style="margin-top:8px;display:flex;gap:6px;">
+                                <input type="url" id="quickCloudUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;font-size:11px;padding:6px;">
+                                <button class="btn btn-primary btn-xs" onclick="connectQuickCloudAndRetry('${googleEmail}')">Connect &amp; Retry</button>
+                            </div>
+                        </div>`;
+                    } else {
+                        msgEl.innerHTML = `<div style="background:rgba(220,38,38,0.1);border:1.5px solid #dc2626;border-radius:var(--radius-sm);padding:10px;margin-top:8px;text-align:left;">
+                            <strong style="color:#dc2626;font-size:12px;">❌ Access Denied: Email Not Registered</strong>
+                            <p style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.4;">
+                                Google account <strong>${googleEmail}</strong> is not registered as Staff or Owner in this portal.<br>
+                                👉 <strong>If you are Staff:</strong> Ask the Owner to register your email in <em>Staff Management</em> on their PC.<br>
+                                👉 <strong>If you are Owner:</strong> Register your business via "Register Business" below.
+                            </p>
+                            <button class="btn btn-secondary btn-xs" onclick="syncAndRetryGoogleLogin('${googleEmail}')" style="margin-top:8px;width:100%;justify-content:center;">
+                                <i class="fas fa-sync"></i> Re-check Store Cloud Database
+                            </button>
+                        </div>`;
+                    }
+                }
                 showToast(`❌ Account not registered: ${googleEmail}`, 'error');
 
             } catch (err) {
@@ -3814,7 +4001,7 @@
             }
         }
 
-        document.getElementById('loginBtn').addEventListener('click', function() {
+        document.getElementById('loginBtn').addEventListener('click', async function() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const pass = document.getElementById('loginPassword').value;
             const msg = document.getElementById('loginMsg');
@@ -3839,6 +4026,23 @@
                     let emp = o.employees.find(e => e.email.toLowerCase() === email && e.isActive !== false);
                     if (emp) { foundEmp = emp; foundOwner = o; break; }
                 }
+
+                // If staff not cached locally on this device, check Google Sheet Cloud!
+                if (!foundEmp && cloudApiUrl) {
+                    msg.innerHTML = '<span style="color:#3b82f6;"><i class="fas fa-spinner fa-spin"></i> Checking store database...</span>';
+                    try {
+                        const res = await fetch(cloudApiUrl + '?action=getAll');
+                        const result = await res.json();
+                        if (result.status === 'success' && result.data) {
+                            mergeCloudData(result.data);
+                            for (let o of owners) {
+                                let emp = o.employees.find(e => e.email.toLowerCase() === email && e.isActive !== false);
+                                if (emp) { foundEmp = emp; foundOwner = o; break; }
+                            }
+                        }
+                    } catch(netErr) {}
+                }
+
                 if (foundEmp && verifyPassword(pass, foundEmp.passwordHash)) {
                     currentOwner = foundOwner;
                     currentEmployee = foundEmp;
@@ -4582,7 +4786,10 @@
                     if (el) el.value = '';
                 });
 
-                if (cloudApiUrl) triggerManualSync();
+                if (cloudApiUrl) {
+                    pushAllDataToCloud();
+                    triggerManualSync();
+                }
             };
 
             if (photoFile) {
@@ -7515,6 +7722,9 @@
             document.documentElement.setAttribute('data-theme', 'dark');
             document.getElementById('themeIcon').className = 'fas fa-sun';
         }
+
+        // Auto-sync latest staff roster from Google Sheets cloud in background
+        syncStaffFromCloudOnBoot();
 
         console.log('✅ KJRSEVA HRMS 2.2 Enterprise Ready');
         console.log('✅ Google Identity Services Loaded');
