@@ -1473,6 +1473,635 @@
         }
         .copy-btn:hover { background: rgba(44,159,110,0.1); }
 
+        /* ===== WHATSAPP-STYLE ENTERPRISE TEAM CHAT SYSTEM ===== */
+        :root {
+            --wa-green: #25d366;
+            --wa-dark-green: #075e54;
+            --wa-teal: #128c7e;
+            --wa-bubble-me: #d9fdd3;
+            --wa-bubble-other: #ffffff;
+            --wa-bg: #efeae2;
+            --wa-text: #111b21;
+            --wa-subtext: #667781;
+        }
+
+        [data-theme="dark"] {
+            --wa-bubble-me: #005c4b;
+            --wa-bubble-other: #202c33;
+            --wa-bg: #0b141a;
+            --wa-text: #e9edef;
+            --wa-subtext: #8696a0;
+        }
+
+        /* Floating WhatsApp Chat Button (FAB) */
+        .floating-chat-fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            color: #ffffff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 8px 24px rgba(37,211,102,0.45);
+            cursor: pointer;
+            z-index: 998;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 2px solid rgba(255,255,255,0.25);
+        }
+        .floating-chat-fab:hover {
+            transform: scale(1.1) translateY(-4px);
+            box-shadow: 0 14px 32px rgba(37,211,102,0.6);
+        }
+        .floating-chat-fab.has-unread {
+            animation: pulseFab 1.8s infinite;
+        }
+        @keyframes pulseFab {
+            0% { box-shadow: 0 0 0 0 rgba(37,211,102,0.7); }
+            70% { box-shadow: 0 0 0 16px rgba(37,211,102,0); }
+            100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); }
+        }
+
+        /* WhatsApp Chat Modal Window */
+        .chat-modal-dialog {
+            width: 100%;
+            max-width: 580px;
+            height: 85vh;
+            max-height: 740px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+        @media (max-width: 640px) {
+            .chat-modal-dialog {
+                max-width: 100%;
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+        }
+
+        /* WhatsApp Chat Header */
+        .wa-chat-header {
+            background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
+            color: #ffffff;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        .wa-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
+        }
+        .wa-group-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #075e54;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .wa-online-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #25d366;
+            border: 2px solid #ffffff;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+        }
+        .wa-header-info {
+            min-width: 0;
+            flex: 1;
+        }
+        .wa-header-title {
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .wa-header-status {
+            font-size: 11px;
+            color: #d1fae5;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+        .wa-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .wa-call-btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: #ffffff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .wa-call-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.08);
+        }
+
+        /* Typing Dots Animation */
+        .typing-dots {
+            display: inline-flex;
+            gap: 3px;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .typing-dots span {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: bounceTyping 1.4s infinite ease-in-out both;
+        }
+        .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounceTyping {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1.3); opacity: 1; }
+        }
+
+        /* Messages Body */
+        .wa-chat-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: var(--wa-bg);
+            background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+            background-size: 16px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
+        }
+        .wa-date-divider {
+            align-self: center;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin: 8px 0;
+            user-select: none;
+        }
+
+        /* Speech Bubbles */
+        .wa-msg-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            margin-bottom: 2px;
+        }
+        .wa-msg-row.me {
+            justify-content: flex-end;
+        }
+        .wa-msg-row.other {
+            justify-content: flex-start;
+        }
+        .wa-msg-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            margin-bottom: 2px;
+        }
+        .wa-bubble {
+            max-width: 82%;
+            padding: 8px 12px 6px 12px;
+            font-size: 13.5px;
+            line-height: 1.4;
+            color: var(--wa-text);
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.13);
+            word-break: break-word;
+        }
+        .wa-bubble.me {
+            background: var(--wa-bubble-me);
+            border-radius: 14px 14px 3px 14px;
+        }
+        .wa-bubble.other {
+            background: var(--wa-bubble-other);
+            border-radius: 14px 14px 14px 3px;
+        }
+        .wa-sender-name {
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .wa-role-badge {
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .wa-role-badge.owner { background: rgba(245,158,11,0.18); color: #d97706; }
+        .wa-role-badge.staff { background: rgba(59,130,246,0.18); color: #2563eb; }
+
+        .wa-msg-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            font-size: 10px;
+            color: var(--wa-subtext);
+            margin-top: 3px;
+            user-select: none;
+        }
+        .wa-ticks {
+            color: #53bdeb;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+        }
+
+        /* Media in Bubbles */
+        .wa-media-img {
+            max-width: 100%;
+            max-height: 240px;
+            border-radius: 8px;
+            cursor: pointer;
+            object-fit: cover;
+            display: block;
+            margin-bottom: 4px;
+            transition: transform 0.2s;
+        }
+        .wa-media-img:hover {
+            transform: scale(1.01);
+            filter: brightness(0.96);
+        }
+        .wa-media-video {
+            max-width: 100%;
+            max-height: 260px;
+            border-radius: 8px;
+            display: block;
+            margin-bottom: 4px;
+            background: #000000;
+        }
+        .wa-media-audio {
+            width: 100%;
+            min-width: 200px;
+            height: 38px;
+            margin-bottom: 4px;
+        }
+
+        /* Message Reactions */
+        .wa-reactions-bar {
+            position: absolute;
+            bottom: -10px;
+            right: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1px 6px;
+            display: flex;
+            gap: 2px;
+            font-size: 11px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+            z-index: 2;
+        }
+        .wa-reaction-hover-picker {
+            display: none;
+            position: absolute;
+            top: -34px;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 3px 8px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.16);
+            gap: 6px;
+            z-index: 5;
+        }
+        .wa-bubble:hover .wa-reaction-hover-picker {
+            display: flex;
+        }
+        .wa-reaction-opt {
+            cursor: pointer;
+            font-size: 15px;
+            transition: transform 0.15s;
+        }
+        .wa-reaction-opt:hover {
+            transform: scale(1.3);
+        }
+
+        /* Quick Emoji Palette */
+        .wa-emoji-quick-bar {
+            display: none;
+            padding: 6px 12px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            gap: 8px;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+        .wa-emoji-quick-bar.show {
+            display: flex;
+        }
+        .wa-emoji-item {
+            cursor: pointer;
+            font-size: 20px;
+            transition: transform 0.15s;
+            padding: 2px;
+        }
+        .wa-emoji-item:hover {
+            transform: scale(1.25);
+        }
+
+        /* Attachment Options Popup */
+        .wa-attach-menu {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            left: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 20;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .wa-attach-menu.show {
+            display: flex;
+        }
+        .wa-attach-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: background 0.15s;
+            text-align: left;
+            width: 100%;
+        }
+        .wa-attach-btn:hover {
+            background: rgba(37,211,102,0.1);
+            color: #128c7e;
+        }
+        .wa-attach-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 15px;
+        }
+
+        /* Chat Input Footer */
+        .wa-chat-footer {
+            padding: 10px 14px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .wa-footer-icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wa-footer-icon-btn:hover {
+            color: #128c7e;
+            background: rgba(0,0,0,0.05);
+        }
+        .wa-chat-input-wrapper {
+            flex: 1;
+            background: var(--bg-body);
+            border: 1.5px solid var(--border-color);
+            border-radius: 24px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            transition: border-color 0.2s;
+        }
+        .wa-chat-input-wrapper:focus-within {
+            border-color: #25d366;
+            background: var(--bg-card);
+        }
+        .wa-chat-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            background: none;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        .wa-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            border: none;
+            color: #ffffff;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37,211,102,0.4);
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .wa-send-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 16px rgba(37,211,102,0.6);
+        }
+        .wa-send-btn.recording {
+            background: #ef4444;
+            animation: pulseRecord 1s infinite;
+        }
+        @keyframes pulseRecord {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.12); }
+            100% { transform: scale(1); }
+        }
+
+        /* Voice & Video Call Modal Overlays */
+        .call-screen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0f172a;
+            z-index: 10001;
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 20px 30px 20px;
+            color: #ffffff;
+        }
+        .call-screen-overlay.show {
+            display: flex;
+        }
+        .call-user-card {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .call-avatar-pulse {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: #128c7e;
+            color: white;
+            font-size: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+            position: relative;
+            box-shadow: 0 0 0 0 rgba(37,211,102,0.7);
+            animation: callRipple 1.8s infinite;
+            overflow: hidden;
+        }
+        @keyframes callRipple {
+            0% { box-shadow: 0 0 0 0 rgba(37,211,102,0.6); }
+            70% { box-shadow: 0 0 0 24px rgba(37,211,102,0); }
+            100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); }
+        }
+        .call-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+        .call-subtitle { font-size: 14px; color: #94a3b8; }
+        .call-timer { font-size: 16px; font-weight: 700; color: #22c55e; margin-top: 8px; }
+
+        .call-controls-bar {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+        .call-ctrl-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            color: #ffffff;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.18);
+        }
+        .call-ctrl-btn:hover { transform: scale(1.1); background: rgba(255,255,255,0.28); }
+        .call-ctrl-btn.active-off { background: #e2e8f0; color: #0f172a; }
+        .call-end-btn {
+            background: #ef4444 !important;
+            width: 64px;
+            height: 64px;
+            font-size: 24px;
+            box-shadow: 0 8px 24px rgba(239,68,68,0.5);
+        }
+        .call-end-btn:hover {
+            transform: scale(1.12);
+            box-shadow: 0 12px 30px rgba(239,68,68,0.7);
+        }
+
+        /* Video Call Screen specific */
+        .video-call-grid {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            height: 60vh;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .main-video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .pip-video-feed {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 140px;
+            height: 180px;
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+            object-fit: cover;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            background: #1e293b;
+        }
     </style>
 </head>
 <body>
@@ -1510,6 +2139,10 @@
             <button class="sidebar-nav-item" data-section="reports" onclick="navigateTo('reports')">
                 <i class="fas fa-file-alt"></i><span>Reports</span>
             </button>
+            <button class="sidebar-nav-item" onclick="openTeamChatModal(); closeMobileNav();" style="color:#22c55e;">
+                <i class="fab fa-whatsapp"></i><span>Team Chat</span>
+                <span class="badge-nav" id="sidebarChatBadge" style="display:none;background:#22c55e;">0</span>
+            </button>
             <button class="sidebar-nav-item" data-section="settings" onclick="navigateTo('settings')">
                 <i class="fas fa-cog"></i><span>Settings & Cloud</span>
             </button>
@@ -1520,6 +2153,10 @@
             <div class="sidebar-nav-label">Staff Navigation</div>
             <button class="sidebar-nav-item active" onclick="scrollToSection('empProfileDisplay'); closeMobileNav();">
                 <i class="fas fa-user-circle"></i><span>My Profile</span>
+            </button>
+            <button class="sidebar-nav-item" onclick="openTeamChatModal(); closeMobileNav();" style="color:#22c55e;">
+                <i class="fab fa-whatsapp"></i><span>Team Chat</span>
+                <span class="badge-nav" id="sidebarEmpChatBadge" style="display:none;background:#22c55e;">0</span>
             </button>
             <button class="sidebar-nav-item" onclick="scrollToSection('empAddWork'); closeMobileNav();">
                 <i class="fas fa-plus-circle"></i><span>Submit Work</span>
@@ -1582,13 +2219,18 @@
                     <i class="fas fa-moon" id="themeIcon"></i>
                 </button>
 
-                <div class="notification-bell" onclick="toggleNotifications()" style="position:relative;cursor:pointer;padding:6px 12px;border-radius:50px;border:1px solid var(--border-color);background:var(--bg-card);">
+                <div class="notification-bell" onclick="toggleNotifications(event)" style="position:relative;cursor:pointer;padding:6px 12px;border-radius:50px;border:1px solid var(--border-color);background:var(--bg-card);" title="Store Notifications & Activity">
                     <i class="fas fa-bell"></i>
-                    <span class="notification-badge" id="notificationCount" style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:white;border-radius:50%;padding:1px 6px;font-size:9px;font-weight:700;">0</span>
-                    <div class="notification-list" id="notificationList" style="position:absolute;right:0;top:40px;background:var(--bg-card);border-radius:var(--radius-md);min-width:300px;box-shadow:var(--shadow-lg);border:1px solid var(--border-color);display:none;z-index:1000;max-height:350px;overflow-y:auto;">
+                    <span class="notification-badge" id="notificationCount" style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:white;border-radius:50%;padding:1px 6px;font-size:9px;font-weight:700;display:none;">0</span>
+                    <div class="notification-list" id="notificationList" style="position:absolute;right:0;top:40px;background:var(--bg-card);border-radius:var(--radius-md);width:340px;max-width:92vw;box-shadow:var(--shadow-lg);border:1px solid var(--border-color);display:none;z-index:1000;max-height:350px;overflow-y:auto;">
                         <div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:0.8rem;">No notifications</div>
                     </div>
                 </div>
+
+                <button class="btn btn-primary btn-sm chat-nav-btn" onclick="openTeamChatModal()" title="KJR Team WhatsApp-style Chat" style="position:relative;background:#25d366;border-color:#20ba5a;color:white;font-weight:700;gap:6px;">
+                    <i class="fab fa-whatsapp" style="font-size:15px;"></i> <span>Team Chat</span>
+                    <span class="notification-badge" id="chatUnreadCount" style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:white;border-radius:50%;padding:1px 6px;font-size:9px;font-weight:700;display:none;">0</span>
+                </button>
 
                 <button class="btn btn-success btn-sm" onclick="triggerManualSync()" title="Sync with Google Sheet">
                     <i class="fas fa-sync" id="refreshSyncIcon"></i> Sync
@@ -1996,6 +2638,10 @@
                         <button class="btn btn-purple" onclick="openPriceEditor()" style="width:100%;justify-content:center;"><i class="fas fa-edit"></i> Edit Service Prices</button>
                     </div>
                     <div>
+                        <h4 style="margin-bottom:6px;font-size:13px;">Owner &amp; Shop Profile</h4>
+                        <button class="btn btn-warning" onclick="editOwnerProfile()" style="width:100%;justify-content:center;"><i class="fas fa-user-edit"></i> Edit Store / Owner Info</button>
+                    </div>
+                    <div>
                         <h4 style="margin-bottom:6px;font-size:13px;">Data Backup &amp; Export</h4>
                         <button class="btn btn-primary" onclick="exportData()" style="width:100%;justify-content:center;"><i class="fas fa-file-export"></i> Download CSV Backup</button>
                     </div>
@@ -2015,6 +2661,7 @@
             <div class="card" style="background:var(--primary);color:white;border:none;">
                 <div class="quick-actions-grid">
                     <div class="quick-action-btn" onclick="document.getElementById('empAddWork').scrollIntoView()"><span class="icon">➕</span> Add Work</div>
+                    <div class="quick-action-btn" onclick="openTeamChatModal()"><span class="icon">💬</span> Team Chat</div>
                     <div class="quick-action-btn" onclick="openWalletPassbook()"><span class="icon">💳</span> Wallet Passbook</div>
                     <div class="quick-action-btn" onclick="openStaffPaymentRequestModal()"><span class="icon">💸</span> Request Payout</div>
                     <div class="quick-action-btn" onclick="openEmployeeAttendance()"><span class="icon">⏰</span> Attendance</div>
@@ -2360,6 +3007,255 @@
         </div>
     </div>
 
+        <!-- ===== SERVICE PRICING EDITOR MODAL ===== -->
+    <div id="priceEditorModal" class="modal">
+        <div class="modal-content" style="max-width:700px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit" style="color:var(--secondary);"></i> Service Pricing &amp; Commission Catalog</h2>
+                <span class="close-modal" onclick="closePriceEditor()">&times;</span>
+            </div>
+            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+                Update retail customer prices and staff commissions. Changes immediately apply to work registration and profit calculations.
+            </p>
+            <div style="position:relative;margin-bottom:12px;">
+                <input type="text" id="priceEditorSearch" placeholder="🔍 Search service name or category (e.g. Pan, Photo, Aadhaar)..." oninput="filterPriceEditorServices()" style="padding:10px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--border-color);width:100%;font-size:13px;">
+            </div>
+            <div style="max-height:380px;overflow-y:auto;border:1px solid var(--border-color);border-radius:var(--radius-sm);">
+                <table class="data-table" style="font-size:12px;">
+                    <thead>
+                        <tr><th>Service Name</th><th>Category</th><th style="width:130px;">Customer Price (₹)</th><th style="width:130px;">Staff Pay (₹)</th></tr>
+                    </thead>
+                    <tbody id="priceEditorTableBody"></tbody>
+                </table>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:8px;">
+                <span id="priceEditorCount" style="font-size:12px;color:var(--text-secondary);">Showing 80+ services</span>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-success" onclick="saveAllPriceEdits()"><i class="fas fa-save"></i> Save All Prices</button>
+                    <button class="btn btn-secondary" onclick="closePriceEditor()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WHATSAPP-STYLE ENTERPRISE TEAM CHAT SYSTEM ===== -->
+    <!-- Floating WhatsApp Action Button (FAB) -->
+    <div id="floatingChatFab" class="floating-chat-fab" onclick="openTeamChatModal()" title="Open KJR Seva Team Chat">
+        <i class="fab fa-whatsapp"></i>
+        <span id="floatingChatBadge" class="notification-badge" style="position:absolute;top:2px;right:2px;background:#dc2626;color:white;border-radius:50%;padding:2px 7px;font-size:10px;font-weight:700;display:none;">0</span>
+    </div>
+
+    <!-- WhatsApp Team Chat Modal -->
+    <div id="teamChatModal" class="modal" style="align-items:center;justify-content:center;padding:10px;backdrop-filter:blur(4px);">
+        <div class="chat-modal-dialog">
+            <!-- Chat Header -->
+            <div class="wa-chat-header">
+                <div class="wa-header-left">
+                    <button type="button" onclick="closeTeamChatModal()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:4px;display:flex;align-items:center;">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="wa-group-avatar">
+                        <i class="fas fa-users"></i>
+                        <span class="wa-online-dot"></span>
+                    </div>
+                    <div class="wa-header-info">
+                        <div class="wa-header-title">
+                            <span id="chatGroupNameDisplay">KJR Seva Team Group</span>
+                            <i class="fas fa-shield-alt" style="color:#dcf8c6;font-size:12px;" title="Store Secure Chat"></i>
+                        </div>
+                        <div class="wa-header-status" id="chatHeaderStatus">
+                            <span id="chatMembersSubtitle">Owner, Staff &amp; Team</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="wa-header-actions">
+                    <button class="wa-call-btn" onclick="startVoiceCall()" title="Start Voice Call with Team">
+                        <i class="fas fa-phone-alt"></i>
+                    </button>
+                    <button class="wa-call-btn" onclick="startVideoCall()" title="Start Video Call with Team">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="wa-call-btn" onclick="toggleChatSearch()" title="Search Messages">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button class="wa-call-btn" onclick="closeTeamChatModal()" title="Close Chat">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- In-Chat Search Bar (Hidden by default) -->
+            <div id="chatSearchBar" style="display:none;padding:8px 14px;background:var(--bg-card);border-bottom:1px solid var(--border-color);">
+                <input type="text" id="chatSearchInput" placeholder="🔍 Search text in chat..." oninput="filterChatMessages()" style="width:100%;padding:6px 12px;border-radius:18px;border:1px solid var(--border-color);font-size:12px;">
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div class="wa-chat-body" id="chatMessagesContainer">
+                <!-- Messages and dividers rendered dynamically -->
+            </div>
+
+            <!-- Typing Indicator Bubble in message body -->
+            <div id="chatTypingRow" style="display:none;padding:0 16px 8px 16px;background:var(--wa-bg);">
+                <div class="wa-bubble other" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;color:var(--text-secondary);font-style:italic;">
+                    <span id="chatTypingPerson">Someone</span> is typing
+                    <span class="typing-dots"><span></span><span></span><span></span></span>
+                </div>
+            </div>
+
+            <!-- Quick Emoji Palette Bar -->
+            <div class="wa-emoji-quick-bar" id="chatEmojiBar">
+                <span class="wa-emoji-item" onclick="insertEmoji('👍')">👍</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('❤️')">❤️</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('👏')">👏</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('🙏')">🙏</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('😂')">😂</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('🔥')">🔥</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('✅')">✅</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('🏢')">🏢</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('💰')">💰</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('🖨️')">🖨️</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('📜')">📜</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('💳')">💳</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('🏖️')">🏖️</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('⏰')">⏰</span>
+                <span class="wa-emoji-item" onclick="insertEmoji('🚀')">🚀</span>
+            </div>
+
+            <!-- Attachment Menu Popup -->
+            <div class="wa-attach-menu" id="chatAttachMenu">
+                <button type="button" class="wa-attach-btn" onclick="triggerChatPhotoUpload()">
+                    <span class="wa-attach-icon" style="background:#8b5cf6;"><i class="fas fa-camera"></i></span>
+                    <div>
+                        <div>Camera / Photo</div>
+                        <small style="font-size:10px;color:var(--text-light);">Share pictures or documents</small>
+                    </div>
+                </button>
+                <button type="button" class="wa-attach-btn" onclick="triggerChatVideoUpload()">
+                    <span class="wa-attach-icon" style="background:#ec4899;"><i class="fas fa-video"></i></span>
+                    <div>
+                        <div>Video Clip</div>
+                        <small style="font-size:10px;color:var(--text-light);">Send recorded video</small>
+                    </div>
+                </button>
+                <button type="button" class="wa-attach-btn" onclick="toggleVoiceNoteRecording()">
+                    <span class="wa-attach-icon" style="background:#22c55e;"><i class="fas fa-microphone"></i></span>
+                    <div>
+                        <div>Voice Note</div>
+                        <small style="font-size:10px;color:var(--text-light);">Record audio message</small>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Hidden File Inputs -->
+            <input type="file" id="chatPhotoInput" accept="image/*" style="display:none;" onchange="handleChatPhotoSelected(event)">
+            <input type="file" id="chatVideoInput" accept="video/*" style="display:none;" onchange="handleChatVideoSelected(event)">
+
+            <!-- Chat Footer Bar -->
+            <div class="wa-chat-footer">
+                <button type="button" class="wa-footer-icon-btn" onclick="toggleChatEmojiBar()" title="Quick Emoji">
+                    <i class="far fa-smile"></i>
+                </button>
+                <button type="button" class="wa-footer-icon-btn" onclick="toggleChatAttachMenu()" title="Attach Photo or Video">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+
+                <div class="wa-chat-input-wrapper">
+                    <input type="text" id="chatTextInput" class="wa-chat-input" placeholder="Type a message to team..." autocomplete="off" oninput="handleChatTyping()" onkeydown="handleChatInputKeyDown(event)">
+                </div>
+
+                <button type="button" id="chatMicBtn" class="wa-footer-icon-btn" onclick="toggleVoiceNoteRecording()" title="Record Voice Note" style="display:flex;">
+                    <i class="fas fa-microphone"></i>
+                </button>
+
+                <button type="button" id="chatSendBtn" class="wa-send-btn" onclick="sendChatTextMessage()" title="Send Message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WHATSAPP-STYLE VOICE CALL SCREEN ===== -->
+    <div id="voiceCallModal" class="call-screen-overlay">
+        <div style="display:flex;justify-content:space-between;width:100%;max-width:500px;align-items:center;">
+            <div style="font-size:13px;color:#94a3b8;"><i class="fas fa-lock"></i> End-to-End Encrypted Call</div>
+            <button onclick="endVoiceCall()" style="background:none;border:none;color:#cbd5e1;font-size:18px;cursor:pointer;"><i class="fas fa-chevron-down"></i></button>
+        </div>
+
+        <div class="call-user-card">
+            <div class="call-avatar-pulse" id="voiceCallAvatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="call-title" id="voiceCallTitle">KJR Seva Group Voice Call</div>
+            <div class="call-subtitle" id="voiceCallStatus">Connecting to Team...</div>
+            <div class="call-timer" id="voiceCallTimer">00:00</div>
+
+            <div style="margin-top:20px;">
+                <button class="btn btn-secondary btn-sm" onclick="joinExternalJitsiCall('audio')" style="background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:6px 14px;font-size:11px;">
+                    <i class="fas fa-external-link-alt"></i> Open Full Group Voice Room (Free Jitsi)
+                </button>
+            </div>
+        </div>
+
+        <div class="call-controls-bar">
+            <button class="call-ctrl-btn" id="voiceMuteBtn" onclick="toggleCallMute()" title="Mute Microphone">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="call-ctrl-btn" id="voiceSpeakerBtn" onclick="toggleCallSpeaker()" title="Speaker">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            <button class="call-ctrl-btn call-end-btn" onclick="endVoiceCall()" title="End Call">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== WHATSAPP-STYLE VIDEO CALL SCREEN ===== -->
+    <div id="videoCallModal" class="call-screen-overlay">
+        <div style="display:flex;justify-content:space-between;width:100%;max-width:900px;align-items:center;">
+            <div style="font-size:13px;color:#94a3b8;"><i class="fas fa-video"></i> KJR Seva Team Live Video Call</div>
+            <button onclick="endVideoCall()" style="background:none;border:none;color:#cbd5e1;font-size:18px;cursor:pointer;"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="video-call-grid">
+            <!-- Main Video Feed -->
+            <video id="mainVideoFeed" class="main-video-feed" autoplay playsinline></video>
+            <!-- Picture in Picture (Self Preview) -->
+            <video id="pipVideoFeed" class="pip-video-feed" autoplay playsinline muted></video>
+
+            <div id="videoCallOverlayInfo" style="position:absolute;bottom:14px;left:14px;background:rgba(0,0,0,0.6);padding:6px 12px;border-radius:20px;font-size:12px;color:white;backdrop-filter:blur(4px);">
+                <span id="videoCallDuration">00:00</span> • Live Store Stream
+            </div>
+        </div>
+
+        <div style="margin:10px 0;text-align:center;">
+            <button class="btn btn-primary btn-sm" onclick="joinExternalJitsiCall('video')" style="background:#25d366;border:none;border-radius:24px;padding:8px 18px;font-weight:700;">
+                <i class="fas fa-users"></i> Join Multi-User Video Room (Everyone on Screen)
+            </button>
+        </div>
+
+        <div class="call-controls-bar">
+            <button class="call-ctrl-btn" id="videoMuteBtn" onclick="toggleVideoCallMic()" title="Mute Mic">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="call-ctrl-btn" id="videoCamToggleBtn" onclick="toggleVideoCallCamera()" title="Toggle Camera">
+                <i class="fas fa-video"></i>
+            </button>
+            <button class="call-ctrl-btn call-end-btn" onclick="endVideoCall()" title="End Video Call">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Full-Screen Lightbox for Photo View -->
+    <div id="chatLightboxModal" class="modal" style="background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:16px;" onclick="closeChatLightbox()">
+        <div style="position:relative;max-width:90vw;max-height:90vh;" onclick="event.stopPropagation()">
+            <img id="chatLightboxImg" src="" style="max-width:100%;max-height:85vh;border-radius:12px;display:block;box-shadow:0 12px 40px rgba(0,0,0,0.8);" alt="Full Image">
+            <button onclick="closeChatLightbox()" style="position:absolute;top:-12px;right:-12px;background:#ef4444;color:white;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.5);">
+                &times;
+            </button>
+        </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
     <!-- ============================================ -->
@@ -2467,12 +3363,130 @@
         }
 
         function addNotification(title, body, type = 'info') {
-            notifications.unshift({ id: Date.now(), title, body, type, time: new Date().toISOString() });
-            unreadCount++;
-            document.getElementById('notificationCount').textContent = unreadCount;
-            document.getElementById('notificationCount').style.display = 'inline';
+            if (!currentOwner) return;
+            if (!currentOwner.notifications) currentOwner.notifications = [];
+
+            const notif = {
+                id: Date.now() + Math.random(),
+                title: title,
+                body: body,
+                type: type,
+                time: new Date().toISOString(),
+                unread: true
+            };
+
+            currentOwner.notifications.unshift(notif);
+            if (currentOwner.notifications.length > 40) currentOwner.notifications.pop();
+            saveOwners();
+            updateNotificationBadge();
             addActivity(title, body, type);
         }
+
+        function updateNotificationBadge() {
+            if (!currentOwner) return;
+            if (!currentOwner.notifications) currentOwner.notifications = [];
+            const unread = currentOwner.notifications.filter(n => n.unread).length;
+            const badge = document.getElementById('notificationCount');
+            if (badge) {
+                badge.textContent = unread;
+                badge.style.display = unread > 0 ? 'inline' : 'none';
+            }
+        }
+
+        function toggleNotifications(event) {
+            if (event) event.stopPropagation();
+            const list = document.getElementById('notificationList');
+            if (!list) return;
+
+            const isShown = list.style.display === 'block';
+            if (isShown) {
+                list.style.display = 'none';
+                return;
+            }
+
+            renderNotificationList();
+            list.style.display = 'block';
+
+            // Mark all as read
+            if (currentOwner && currentOwner.notifications) {
+                currentOwner.notifications.forEach(n => n.unread = false);
+                saveOwners();
+                updateNotificationBadge();
+            }
+        }
+
+        function renderNotificationList() {
+            const list = document.getElementById('notificationList');
+            if (!list || !currentOwner) return;
+
+            const notifs = currentOwner.notifications || [];
+            if (notifs.length === 0) {
+                list.innerHTML = `
+                    <div style="padding:20px;text-align:center;color:var(--text-secondary);font-size:0.85rem;">
+                        <div style="font-size:24px;margin-bottom:4px;">🔕</div>
+                        <strong>No Notifications</strong>
+                        <p style="font-size:11px;color:var(--text-light);margin-top:2px;">You are completely caught up!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const getIcon = (type) => {
+                if (type === 'payment') return '💰';
+                if (type === 'success') return '✅';
+                if (type === 'attendance') return '⏰';
+                if (type === 'leave') return '🏖️';
+                if (type === 'warning') return '⚠️';
+                return 'ℹ️';
+            };
+
+            const getTimeAgo = (iso) => {
+                if (!iso) return '';
+                const diff = (Date.now() - new Date(iso)) / 1000;
+                if (diff < 60) return 'Just now';
+                if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            };
+
+            list.innerHTML = `
+                <div style="padding:10px 14px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border-radius:var(--radius-md) var(--radius-md) 0 0;">
+                    <strong style="font-size:12px;color:var(--text-primary);"><i class="fas fa-bell"></i> Store Alerts &amp; Activity</strong>
+                    <button type="button" onclick="clearAllNotifications(event)" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:11px;text-decoration:underline;">Clear all</button>
+                </div>
+                <div style="max-height:300px;overflow-y:auto;">
+                    ${notifs.map(n => `
+                        <div style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-color);align-items:flex-start;background:var(--bg-card);">
+                            <div style="font-size:16px;line-height:1;margin-top:2px;">${getIcon(n.type)}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:12px;font-weight:700;color:var(--text-primary);">${n.title}</div>
+                                <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;line-height:1.3;">${n.body || ''}</div>
+                                <div style="font-size:10px;color:var(--text-light);margin-top:4px;">${getTimeAgo(n.time)}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function clearAllNotifications(event) {
+            if (event) event.stopPropagation();
+            if (!currentOwner) return;
+            currentOwner.notifications = [];
+            saveOwners();
+            updateNotificationBadge();
+            renderNotificationList();
+            showToast('All notifications cleared', 'info');
+        }
+
+        // Close notification list when clicking outside
+        window.addEventListener('click', function(e) {
+            const list = document.getElementById('notificationList');
+            const bell = document.querySelector('.notification-bell');
+            if (list && list.style.display === 'block' && bell && !bell.contains(e.target)) {
+                list.style.display = 'none';
+            }
+        });
 
         function addActivity(title, body, type = 'info') {
             activities.unshift({ id: Date.now(), title, body, type, time: new Date().toISOString() });
@@ -2559,6 +3573,9 @@
             if (cloudData.attendance) currentOwner.attendance = cloudData.attendance;
             if (cloudData.leaveRequests) currentOwner.leaveRequests = cloudData.leaveRequests;
             if (cloudData.employees && isUserOwner()) currentOwner.employees = cloudData.employees;
+            if (cloudData.chatMessages && Array.isArray(cloudData.chatMessages)) {
+                mergeChatMessages(cloudData.chatMessages);
+            }
             saveOwners();
             refreshAllViews();
         }
@@ -2757,6 +3774,7 @@
             if (!currentOwner.paymentRequests) currentOwner.paymentRequests = [];
             if (!currentOwner.attendance) currentOwner.attendance = [];
             if (!currentOwner.leaveRequests) currentOwner.leaveRequests = [];
+            if (!currentOwner.chatMessages) currentOwner.chatMessages = [];
 
             // Data integrity check: if owners[0].email was accidentally overwritten by a staff email during past Google login tests, restore it!
             if (currentOwner.employees && currentOwner.employees.some(e => e.email.toLowerCase().trim() === currentOwner.email.toLowerCase().trim())) {
@@ -2860,6 +3878,10 @@
                 if (sEmp) sEmp.style.display = 'block';
                 initEmployeeDashboard();
             }
+
+            const fab = document.getElementById('floatingChatFab');
+            if (fab) fab.style.display = 'flex';
+            if (typeof updateChatBadge === 'function') updateChatBadge();
 
             addNotification('👋 Logged In', `Welcome back, ${isOwner ? currentOwner.name : currentEmployee.name}!`, 'success');
             
@@ -3195,6 +4217,7 @@
             renderLeaveManagement();
             renderAttendanceDashboard();
             renderOwnerPaymentRequests();
+            updateNotificationBadge();
             switchReportTab('daily');
         }
 
@@ -3486,6 +4509,8 @@
                 if (cloudApiUrl) triggerManualSync();
 
                 const emp = currentOwner.employees.find(e => e.id === entry.employeeId);
+                addNotification('✅ Work Approved', `${entry.serviceName} approved for ${emp ? emp.name : 'Staff'} (₹${(entry.customerPrice || 0).toFixed(2)})`, 'success');
+
                 const cleanPhone = emp ? (emp.mobile || '').replace(/\D/g, '').slice(-10) : '';
                 if (cleanPhone.length === 10) {
                     setTimeout(() => {
@@ -3503,6 +4528,8 @@
                 saveOwners();
                 renderOwnerTables();
                 renderOwnerStats();
+                renderFinancialSummary();
+                addNotification('🗑️ Record Deleted', `Work entry #${id} was deleted`, 'warning');
                 showToast('Record deleted', 'info');
                 if (cloudApiUrl) triggerManualSync();
             }
@@ -3956,6 +4983,7 @@
             renderEmployeeView();
             renderEmployeeAttendanceView();
             renderEmployeePaymentRequests();
+            updateNotificationBadge();
 
             document.getElementById('empSubmitWorkBtn').onclick = function() {
                 const ws = document.getElementById('empWorkSelect');
@@ -4154,37 +5182,6 @@
             }
         }
 
-        function openEmployeeAttendance() {
-            if (!currentEmployee) return;
-            const today = getTodayStr();
-            const time = getCurrentTime();
-            if (!currentOwner.attendance) currentOwner.attendance = [];
-            const existing = currentOwner.attendance.find(a => a.employeeId === currentEmployee.id && a.date === today);
-            
-            if (existing) {
-                if (existing.checkOut) {
-                    showToast(`⏰ Attendance already completed for today (${existing.checkIn} - ${existing.checkOut})`, 'info');
-                } else {
-                    existing.checkOut = time;
-                    saveOwners();
-                    showToast(`✅ Checked OUT at ${time}! Shift complete.`, 'success');
-                    if (cloudApiUrl) triggerManualSync();
-                }
-            } else {
-                currentOwner.attendance.push({
-                    id: Date.now(),
-                    employeeId: currentEmployee.id,
-                    employeeName: currentEmployee.name,
-                    date: today,
-                    checkIn: time,
-                    checkOut: null,
-                    status: 'Present'
-                });
-                saveOwners();
-                showToast(`✅ Checked IN at ${time}! Shift started.`, 'success');
-                if (cloudApiUrl) triggerManualSync();
-            }
-        }
 
         function openEmployeeLeave() {
             if (!currentEmployee) return;
@@ -4252,16 +5249,187 @@
         }
 
         function renderFinancialSummary() {
-            const approved = currentOwner.workEntries.filter(e => e.approvalStatus === 'approved');
+            if (!currentOwner) return;
+            const approved = (currentOwner.workEntries || []).filter(e => e.approvalStatus === 'approved');
             const totalRev = approved.reduce((s, e) => s + (e.customerPrice || 0), 0);
             const totalCost = approved.reduce((s, e) => s + (e.employeePayment || 0) + (e.printCost || 0) + (e.scanCost || 0), 0);
             const netProfit = totalRev - totalCost;
             const margin = totalRev > 0 ? ((netProfit / totalRev) * 100).toFixed(1) : 0;
 
-            document.getElementById('fsTotalRevenue').textContent = '₹' + totalRev.toFixed(2);
-            document.getElementById('fsTotalExpenses').textContent = '₹' + totalCost.toFixed(2);
-            document.getElementById('fsNetProfit').textContent = '₹' + netProfit.toFixed(2);
-            document.getElementById('fsProfitMargin').textContent = margin + '%';
+            const elRev = document.getElementById('fsTotalRevenue');
+            const elExp = document.getElementById('fsTotalExpenses');
+            const elNet = document.getElementById('fsNetProfit');
+            const elMar = document.getElementById('fsProfitMargin');
+
+            if (elRev) elRev.textContent = '₹' + totalRev.toFixed(2);
+            if (elExp) elExp.textContent = '₹' + totalCost.toFixed(2);
+            if (elNet) elNet.textContent = '₹' + netProfit.toFixed(2);
+            if (elMar) elMar.textContent = margin + '%';
+
+            // -------------------------------------------------
+            // CHART 1: Monthly Revenue vs Expenses
+            // -------------------------------------------------
+            const canvasMonthly = document.getElementById('monthlySummaryChart');
+            if (canvasMonthly && typeof Chart !== 'undefined') {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const now = new Date();
+
+                // Build last 6 months list
+                const last6Months = [];
+                for (let i = 5; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    last6Months.push({
+                        year: d.getFullYear(),
+                        month: d.getMonth(),
+                        label: monthNames[d.getMonth()] + ' ' + d.getFullYear().toString().slice(-2)
+                    });
+                }
+
+                const revData = last6Months.map(m => {
+                    return approved.filter(e => {
+                        const ed = new Date(e.date);
+                        return ed.getMonth() === m.month && ed.getFullYear() === m.year;
+                    }).reduce((s, e) => s + (e.customerPrice || 0), 0);
+                });
+
+                const expData = last6Months.map(m => {
+                    return approved.filter(e => {
+                        const ed = new Date(e.date);
+                        return ed.getMonth() === m.month && ed.getFullYear() === m.year;
+                    }).reduce((s, e) => s + (e.employeePayment || 0) + (e.printCost || 0) + (e.scanCost || 0), 0);
+                });
+
+                // Fallback: if all months zero but we have total revenue, place into current month
+                const curIdx = last6Months.length - 1;
+                if (revData.every(v => v === 0) && totalRev > 0) {
+                    revData[curIdx] = totalRev;
+                    expData[curIdx] = totalCost;
+                }
+
+                if (monthlyChartInstance) {
+                    try { monthlyChartInstance.destroy(); } catch (e) {}
+                }
+
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const textColor = isDark ? '#cbd5e1' : '#475569';
+                const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+                monthlyChartInstance = new Chart(canvasMonthly, {
+                    type: 'bar',
+                    data: {
+                        labels: last6Months.map(m => m.label),
+                        datasets: [
+                            {
+                                label: 'Revenue (₹)',
+                                data: revData,
+                                backgroundColor: 'rgba(34, 197, 94, 0.85)',
+                                borderColor: '#16a34a',
+                                borderWidth: 1.5,
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Expenses (₹)',
+                                data: expData,
+                                backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                                borderColor: '#dc2626',
+                                borderWidth: 1.5,
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { color: textColor, font: { size: 11, weight: '600' } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => ` ${ctx.dataset.label}: ₹${ctx.parsed.y.toFixed(2)}`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: textColor, font: { size: 10 } },
+                                grid: { color: gridColor }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: textColor,
+                                    font: { size: 10 },
+                                    callback: (val) => '₹' + val
+                                },
+                                grid: { color: gridColor }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // -------------------------------------------------
+            // CHART 2: Staff Earnings & Contribution
+            // -------------------------------------------------
+            const canvasStaff = document.getElementById('employeeEarningsChart');
+            if (canvasStaff && typeof Chart !== 'undefined') {
+                const employees = currentOwner.employees || [];
+                const staffLabels = [];
+                const staffRevenue = [];
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+
+                employees.forEach(emp => {
+                    const empWork = approved.filter(w => w.employeeId === emp.id);
+                    const empRev = empWork.reduce((s, w) => s + (w.customerPrice || 0), 0);
+                    staffLabels.push(emp.name);
+                    staffRevenue.push(empRev);
+                });
+
+                const hasData = staffRevenue.some(v => v > 0);
+                const displayLabels = hasData ? staffLabels : (employees.length ? employees.map(e => e.name) : ['Demo Staff']);
+                const displayData = hasData ? staffRevenue : (employees.length ? employees.map(() => 1) : [1]);
+
+                if (employeeChartInstance) {
+                    try { employeeChartInstance.destroy(); } catch (e) {}
+                }
+
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const textColor = isDark ? '#cbd5e1' : '#475569';
+
+                employeeChartInstance = new Chart(canvasStaff, {
+                    type: 'doughnut',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [{
+                            data: displayData,
+                            backgroundColor: colors.slice(0, displayLabels.length),
+                            borderWidth: 2,
+                            borderColor: isDark ? '#131b2e' : '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: textColor, font: { size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => {
+                                        if (!hasData) return ' No approved work recorded yet';
+                                        return ` ${ctx.label}: ₹${ctx.parsed.toFixed(2)}`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '62%'
+                    }
+                });
+            }
         }
 
         // =============================================
@@ -4613,8 +5781,17 @@
             // Update live clock
             const clockEl = document.getElementById('empAttendanceLiveClock');
             if (clockEl) {
-                const now = new Date();
-                clockEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' • ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                const updateClock = () => {
+                    const now = new Date();
+                    clockEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' • ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                };
+                updateClock();
+                if (!window._attendanceClockInterval) {
+                    window._attendanceClockInterval = setInterval(() => {
+                        const el = document.getElementById('empAttendanceLiveClock');
+                        if (el && currentEmployee) updateClock();
+                    }, 1000);
+                }
             }
 
             if (!currentOwner.attendance) currentOwner.attendance = [];
@@ -4723,6 +5900,7 @@
             });
             saveOwners();
             renderEmployeeAttendanceView();
+            addNotification('⏰ Shift Started', `${currentEmployee.name} checked in at ${time}`, 'attendance');
             showToast(`✅ Checked IN at ${time}! Have a productive shift.`, 'success');
             if (cloudApiUrl) triggerManualSync();
         }
@@ -4744,6 +5922,7 @@
             existing.status = 'Completed';
             saveOwners();
             renderEmployeeAttendanceView();
+            addNotification('🏁 Shift Ended', `${currentEmployee.name} checked out at ${time} (${existing.hoursWorked})`, 'attendance');
             showToast(`✅ Checked OUT at ${time}! Shift complete (${existing.hoursWorked}).`, 'success');
             if (cloudApiUrl) triggerManualSync();
         }
@@ -5057,6 +6236,7 @@
             req.rejectionReason = reason || 'Declined by owner';
             saveOwners();
             renderOwnerPaymentRequests();
+            addNotification('❌ Payout Declined', `Declined ₹${req.amount.toFixed(2)} request from ${req.employeeName}`, 'warning');
             showToast('Payment request declined', 'info');
             if (cloudApiUrl) triggerManualSync();
         }
@@ -5128,9 +6308,232 @@
             showToast(`❌ Leave rejected for ${req.employeeName}`, 'info');
             if (cloudApiUrl) triggerManualSync();
         }
-        function switchReportTab(t) {}
-        function showAllServices() { showToast(`${servicesCatalog.length} services in catalog`, 'info'); }
-        function openPriceEditor() { showToast('Pricing editor open', 'info'); }
+        function switchReportTab(period) {
+            const tabs = document.querySelectorAll('#reportsSection .tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            const activeBtn = Array.from(tabs).find(t => t.getAttribute('onclick') && t.getAttribute('onclick').includes(period));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const container = document.getElementById('reportContent');
+            if (!container || !currentOwner) return;
+
+            const approved = (currentOwner.workEntries || []).filter(e => e.approvalStatus === 'approved');
+            const now = new Date();
+            const todayStr = getTodayStr();
+
+            let filtered = [];
+            let periodTitle = '';
+
+            if (period === 'daily') {
+                periodTitle = "Today's Business Summary (" + todayStr + ")";
+                filtered = approved.filter(e => e.date === todayStr);
+            } else if (period === 'weekly') {
+                periodTitle = "Past 7 Days Performance";
+                const d7 = new Date();
+                d7.setDate(d7.getDate() - 7);
+                const d7Str = d7.toISOString().slice(0, 10);
+                filtered = approved.filter(e => e.date >= d7Str);
+            } else if (period === 'monthly') {
+                periodTitle = "This Month (" + now.toLocaleString('default', { month: 'long', year: 'numeric' }) + ")";
+                filtered = approved.filter(e => {
+                    const d = new Date(e.date);
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                });
+            } else if (period === 'yearly') {
+                periodTitle = "Current Year (" + now.getFullYear() + ")";
+                filtered = approved.filter(e => new Date(e.date).getFullYear() === now.getFullYear());
+            } else if (period === 'employee') {
+                periodTitle = "Staff-wise Performance & Commissions";
+            }
+
+            if (period === 'employee') {
+                const employees = currentOwner.employees || [];
+                container.innerHTML = `
+                    <div style="margin-top:14px;">
+                        <h4 style="font-size:13px;color:var(--text-primary);margin-bottom:10px;">${periodTitle}</h4>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>Staff Member</th><th>Role / Dept</th><th>Tasks Approved</th><th>Total Revenue Generated</th><th>Commission Earned</th><th>Payouts Received</th><th>Pending Wallet</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${employees.map(emp => {
+                                        const empWork = approved.filter(w => w.employeeId === emp.id);
+                                        const rev = empWork.reduce((s, w) => s + (w.customerPrice || 0), 0);
+                                        const earned = empWork.reduce((s, w) => s + (w.employeePayment || 0), 0);
+                                        const paid = (currentOwner.paymentRecords || []).filter(p => p.employeeId === emp.id).reduce((s, p) => s + (p.amount || 0), 0);
+                                        const pending = Math.max(0, earned - paid);
+                                        return `
+                                            <tr>
+                                                <td><strong>${emp.name}</strong></td>
+                                                <td>${emp.designation || 'Staff'} • ${emp.department || '-'}</td>
+                                                <td><span class="badge badge-info">${empWork.length}</span></td>
+                                                <td><strong style="color:var(--secondary);">₹${rev.toFixed(2)}</strong></td>
+                                                <td>₹${earned.toFixed(2)}</td>
+                                                <td>₹${paid.toFixed(2)}</td>
+                                                <td><span style="font-weight:700;color:${pending > 0 ? '#16a34a' : 'var(--text-light)'};">₹${pending.toFixed(2)}</span></td>
+                                            </tr>
+                                        `;
+                                    }).join('') || '<tr><td colspan="7" class="empty-state">No active employees</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const totalRev = filtered.reduce((s, e) => s + (e.customerPrice || 0), 0);
+            const totalStaffPay = filtered.reduce((s, e) => s + (e.employeePayment || 0), 0);
+            const totalPrintScan = filtered.reduce((s, e) => s + (e.printCost || 0) + (e.scanCost || 0), 0);
+            const netShopProfit = totalRev - totalStaffPay - totalPrintScan;
+            const margin = totalRev > 0 ? ((netShopProfit / totalRev) * 100).toFixed(1) : 0;
+
+            container.innerHTML = `
+                <div style="margin-top:14px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                        <h4 style="font-size:14px;color:var(--text-primary);"><i class="fas fa-calendar-check" style="color:var(--secondary);"></i> ${periodTitle}</h4>
+                        <div style="display:flex;gap:8px;">
+                            <span class="badge badge-success">Revenue: ₹${totalRev.toFixed(2)}</span>
+                            <span class="badge badge-info">Net Profit: ₹${netShopProfit.toFixed(2)} (${margin}%)</span>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Date &amp; Time</th><th>Staff</th><th>Service Name</th><th>Customer</th><th>Price</th><th>Staff Pay</th><th>Costs</th><th>Net Profit</th></tr>
+                            </thead>
+                            <tbody>
+                                ${filtered.slice(0, 30).map(e => {
+                                    const cost = (e.employeePayment || 0) + (e.printCost || 0) + (e.scanCost || 0);
+                                    const profit = (e.customerPrice || 0) - cost;
+                                    return `
+                                        <tr>
+                                            <td>${e.date} <small style="color:var(--text-light);">${e.time || ''}</small></td>
+                                            <td><strong>${e.employeeName}</strong></td>
+                                            <td>${e.workName}</td>
+                                            <td>${e.customerName || '-'}</td>
+                                            <td><strong>₹${(e.customerPrice || 0).toFixed(2)}</strong></td>
+                                            <td>₹${(e.employeePayment || 0).toFixed(2)}</td>
+                                            <td>₹${cost.toFixed(2)}</td>
+                                            <td style="font-weight:700;color:${profit >= 0 ? '#16a34a' : '#dc2626'};">₹${profit.toFixed(2)}</td>
+                                        </tr>
+                                    `;
+                                }).join('') || '<tr><td colspan="8" class="empty-state">No approved work records for this period</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // =============================================
+        // SERVICE PRICING EDITOR
+        // =============================================
+        function openPriceEditor() {
+            document.getElementById('priceEditorModal').classList.add('show');
+            const searchInput = document.getElementById('priceEditorSearch');
+            if (searchInput) searchInput.value = '';
+            renderPriceEditorTable();
+        }
+
+        function closePriceEditor() {
+            document.getElementById('priceEditorModal').classList.remove('show');
+        }
+
+        function filterPriceEditorServices() {
+            renderPriceEditorTable();
+        }
+
+        function renderPriceEditorTable() {
+            const tbody = document.getElementById('priceEditorTableBody');
+            const countEl = document.getElementById('priceEditorCount');
+            if (!tbody) return;
+
+            const query = (document.getElementById('priceEditorSearch').value || '').toLowerCase().trim();
+            const list = (currentOwner.servicesCatalog || defaultServices).filter(s => {
+                if (!query) return true;
+                return s.name.toLowerCase().includes(query) || (s.category && s.category.toLowerCase().includes(query));
+            });
+
+            if (countEl) countEl.textContent = `Showing ${list.length} of ${(currentOwner.servicesCatalog || defaultServices).length} services`;
+
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No matching services found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map((s, idx) => {
+                const originalIndex = (currentOwner.servicesCatalog || defaultServices).findIndex(orig => orig.name === s.name);
+                return `
+                    <tr>
+                        <td><strong>${s.name}</strong></td>
+                        <td><span class="badge badge-info" style="font-size:10px;">${s.category || 'General'}</span></td>
+                        <td>
+                            <input type="number" min="0" step="1" value="${s.customerPrice}" data-svc-idx="${originalIndex}" class="price-edit-cust" style="width:100%;padding:4px 8px;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-weight:700;">
+                        </td>
+                        <td>
+                            <input type="number" min="0" step="1" value="${s.employeePayment}" data-svc-idx="${originalIndex}" class="price-edit-emp" style="width:100%;padding:4px 8px;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-weight:700;color:var(--secondary);">
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function saveAllPriceEdits() {
+            if (!currentOwner) return;
+            const catalog = currentOwner.servicesCatalog || defaultServices;
+
+            const custInputs = document.querySelectorAll('.price-edit-cust');
+            custInputs.forEach(inp => {
+                const idx = parseInt(inp.getAttribute('data-svc-idx'));
+                if (!isNaN(idx) && catalog[idx]) {
+                    catalog[idx].customerPrice = parseFloat(inp.value) || 0;
+                }
+            });
+
+            const empInputs = document.querySelectorAll('.price-edit-emp');
+            empInputs.forEach(inp => {
+                const idx = parseInt(inp.getAttribute('data-svc-idx'));
+                if (!isNaN(idx) && catalog[idx]) {
+                    catalog[idx].employeePayment = parseFloat(inp.value) || 0;
+                }
+            });
+
+            currentOwner.servicesCatalog = catalog;
+            servicesCatalog = catalog;
+            saveOwners();
+            filterServiceOptions();
+            filterEmpServiceOptions();
+            closePriceEditor();
+            showToast('✅ All service prices & commissions saved!', 'success');
+            if (cloudApiUrl) triggerManualSync();
+        }
+
+        // =============================================
+        // STORE & OWNER PROFILE EDITOR
+        // =============================================
+        function editOwnerProfile() {
+            if (!currentOwner) return;
+            const newName = prompt('Enter Owner / Proprietor Name:', currentOwner.name || 'Satyaban Jena');
+            if (newName === null) return;
+            const newBiz = prompt('Enter Store / Business Name:', currentOwner.businessName || 'KJR Seva Kendra');
+            if (newBiz === null) return;
+            const newPhone = prompt('Enter Business Contact Phone Number:', currentOwner.mobile || '+919090338805');
+
+            if (newName.trim()) currentOwner.name = newName.trim();
+            if (newBiz.trim()) currentOwner.businessName = newBiz.trim();
+            if (newPhone && newPhone.trim()) currentOwner.mobile = newPhone.trim();
+
+            saveOwners();
+            refreshAllViews();
+            showToast('✅ Store & Owner Profile updated!', 'success');
+            if (cloudApiUrl) triggerManualSync();
+        }
+
+        function showAllServices() {
+            openPriceEditor();
+        }
         function togglePasswordVisibility(id) {
             const inp = document.getElementById(id);
             inp.type = inp.type === 'password' ? 'text' : 'password';
@@ -5267,6 +6670,840 @@
                 document.getElementById('loginEmail').value = email;
                 document.getElementById('loginPassword').value = newPass;
             }, 1500);
+        }
+
+        // =============================================
+        // WHATSAPP-STYLE ENTERPRISE TEAM CHAT SYSTEM
+        // =============================================
+        let chatBroadcastChannel = null;
+        try {
+            chatBroadcastChannel = new BroadcastChannel('kjrseva_team_chat');
+        } catch (e) {
+            console.warn('BroadcastChannel not supported');
+        }
+
+        let chatTypingTimer = null;
+        let isVoiceRecording = false;
+        let voiceMediaRecorder = null;
+        let voiceAudioChunks = [];
+        let callTimerInterval = null;
+        let callSeconds = 0;
+        let localAudioStream = null;
+        let localVideoStream = null;
+        let isCallMuted = false;
+        let isSpeakerOn = true;
+        let isVideoCameraOff = false;
+        let chatPollInterval = null;
+        let unreadChatCount = 0;
+
+        function playChatSound(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'incoming') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.18);
+                } else if (type === 'outgoing') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.1);
+                } else if (type === 'call') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.4);
+                }
+            } catch (e) {}
+        }
+
+        function openTeamChatModal() {
+            if (!currentOwner) return showToast('Please log in first', 'warning');
+            if (!currentOwner.chatMessages) currentOwner.chatMessages = [];
+
+            const modal = document.getElementById('teamChatModal');
+            if (!modal) return;
+            modal.classList.add('show');
+
+            const titleEl = document.getElementById('chatGroupNameDisplay');
+            if (titleEl) titleEl.textContent = (currentOwner.businessName || 'KJR Seva Kendra') + ' Team Group';
+
+            const subEl = document.getElementById('chatMembersSubtitle');
+            if (subEl) {
+                const names = ['👑 ' + currentOwner.name];
+                (currentOwner.employees || []).filter(e => e.isActive !== false).forEach(e => names.push(e.name));
+                subEl.textContent = names.join(', ');
+            }
+
+            unreadChatCount = 0;
+            updateChatBadge();
+            renderChatMessages();
+
+            const input = document.getElementById('chatTextInput');
+            if (input) setTimeout(() => input.focus(), 200);
+
+            // Start polling for new cloud messages every 4 seconds while chat is open
+            if (cloudApiUrl && !chatPollInterval) {
+                chatPollInterval = setInterval(pollCloudChatMessages, 4000);
+            }
+        }
+
+        function closeTeamChatModal() {
+            const modal = document.getElementById('teamChatModal');
+            if (modal) modal.classList.remove('show');
+            const menu = document.getElementById('chatAttachMenu');
+            if (menu) menu.classList.remove('show');
+            const bar = document.getElementById('chatEmojiBar');
+            if (bar) bar.classList.remove('show');
+            const search = document.getElementById('chatSearchBar');
+            if (search) search.style.display = 'none';
+
+            if (chatPollInterval) {
+                clearInterval(chatPollInterval);
+                chatPollInterval = null;
+            }
+            broadcastChatTyping(false);
+        }
+
+        function updateChatBadge() {
+            const b1 = document.getElementById('chatUnreadCount');
+            const b2 = document.getElementById('floatingChatBadge');
+            const b3 = document.getElementById('sidebarChatBadge');
+            const b4 = document.getElementById('sidebarEmpChatBadge');
+            const fab = document.getElementById('floatingChatFab');
+
+            const txt = unreadChatCount > 0 ? (unreadChatCount > 99 ? '99+' : unreadChatCount) : '0';
+            const disp = unreadChatCount > 0 ? 'inline' : 'none';
+
+            if (b1) { b1.textContent = txt; b1.style.display = disp; }
+            if (b2) { b2.textContent = txt; b2.style.display = disp; }
+            if (b3) { b3.textContent = txt; b3.style.display = disp; }
+            if (b4) { b4.textContent = txt; b4.style.display = disp; }
+
+            if (fab) {
+                if (unreadChatCount > 0) fab.classList.add('has-unread');
+                else fab.classList.remove('has-unread');
+            }
+        }
+
+        function renderChatMessages(filterQuery = '') {
+            const container = document.getElementById('chatMessagesContainer');
+            if (!container || !currentOwner) return;
+
+            if (!currentOwner.chatMessages) currentOwner.chatMessages = [];
+            let msgs = currentOwner.chatMessages;
+
+            if (filterQuery) {
+                const q = filterQuery.toLowerCase().trim();
+                msgs = msgs.filter(m => (m.text || '').toLowerCase().includes(q) || (m.senderName || '').toLowerCase().includes(q));
+            }
+
+            if (msgs.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:40px 20px;color:var(--text-light);font-size:13px;">
+                        <div style="font-size:42px;margin-bottom:8px;">💬</div>
+                        <strong style="color:var(--text-primary);font-size:15px;">Welcome to KJR Seva Team Chat!</strong>
+                        <p style="margin-top:4px;font-size:12px;">Send a message, photo, video, or start a voice/video call with your store team.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const nameColors = ['#0284c7', '#7c3aed', '#059669', '#d97706', '#db2777', '#dc2626', '#4f46e5'];
+            const getColor = (str) => {
+                let hash = 0;
+                for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                return nameColors[Math.abs(hash) % nameColors.length];
+            };
+
+            let lastDate = '';
+            let html = '';
+
+            msgs.forEach(m => {
+                const isMe = (currentEmployee && m.senderId === currentEmployee.id) ||
+                             (!currentEmployee && (m.senderRole === 'owner' || m.senderId === currentOwner.id));
+
+                const msgDate = m.date || 'Today';
+                if (msgDate !== lastDate) {
+                    html += `<div class="wa-date-divider">${msgDate === getTodayStr() ? 'Today' : msgDate}</div>`;
+                    lastDate = msgDate;
+                }
+
+                let mediaHtml = '';
+                if (m.mediaType === 'photo' && m.mediaUrl) {
+                    mediaHtml = `
+                        <div style="position:relative;">
+                            <img src="${m.mediaUrl}" class="wa-media-img" onclick="openChatLightbox('${m.mediaUrl}')" alt="Photo" loading="lazy">
+                        </div>
+                    `;
+                } else if (m.mediaType === 'video' && m.mediaUrl) {
+                    mediaHtml = `
+                        <video src="${m.mediaUrl}" class="wa-media-video" controls playsinline></video>
+                    `;
+                } else if (m.mediaType === 'audio' && m.mediaUrl) {
+                    mediaHtml = `
+                        <audio src="${m.mediaUrl}" class="wa-media-audio" controls></audio>
+                    `;
+                } else if (m.mediaType === 'call') {
+                    mediaHtml = `
+                        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:700;color:${(m.text || '').includes('Video') ? '#8b5cf6' : '#22c55e'};">
+                            <i class="fas ${(m.text || '').includes('Video') ? 'fa-video' : 'fa-phone-alt'}"></i>
+                            <span>${m.text}</span>
+                        </div>
+                    `;
+                }
+
+                // Make URLs clickable
+                let textHtml = '';
+                if (m.text && m.mediaType !== 'call') {
+                    const urlRegex = /(https?:\/\/[^\s]+)/g;
+                    const formatted = (m.text || '').replace(urlRegex, url => `<a href="${url}" target="_blank" style="color:#2563eb;text-decoration:underline;word-break:break-all;">${url}</a>`);
+                    textHtml = `<div style="white-space:pre-wrap;">${formatted}</div>`;
+                }
+
+                // Reactions
+                let reactionsHtml = '';
+                const rxKeys = Object.keys(m.reactions || {});
+                if (rxKeys.length > 0) {
+                    reactionsHtml = `
+                        <div class="wa-reactions-bar">
+                            ${rxKeys.map(k => `<span>${k} ${m.reactions[k]}</span>`).join(' ')}
+                        </div>
+                    `;
+                }
+
+                const senderColor = getColor(m.senderName);
+                const roleBadge = m.senderRole === 'owner' ?
+                    '<span class="wa-role-badge owner">👑 Owner</span>' :
+                    '<span class="wa-role-badge staff">👤 Staff</span>';
+
+                const avatarContent = m.senderPhoto ?
+                    `<img src="${m.senderPhoto}" style="width:100%;height:100%;object-fit:cover;" alt="${m.senderName}">` :
+                    (m.senderName ? m.senderName.charAt(0) : '?');
+
+                html += `
+                    <div class="wa-msg-row ${isMe ? 'me' : 'other'}">
+                        ${!isMe ? `<div class="wa-msg-avatar" style="background:${senderColor};">${avatarContent}</div>` : ''}
+                        <div class="wa-bubble ${isMe ? 'me' : 'other'}">
+                            ${!isMe ? `
+                                <div class="wa-sender-name" style="color:${senderColor};">
+                                    ${m.senderName} ${roleBadge}
+                                </div>
+                            ` : ''}
+                            ${mediaHtml}
+                            ${textHtml}
+                            <div class="wa-msg-footer">
+                                <span>${m.time || ''}</span>
+                                ${isMe ? '<span class="wa-ticks">✓✓</span>' : ''}
+                            </div>
+                            ${reactionsHtml}
+                            <div class="wa-reaction-hover-picker">
+                                <span class="wa-reaction-opt" onclick="reactToChatMessage('${m.id}', '👍')">👍</span>
+                                <span class="wa-reaction-opt" onclick="reactToChatMessage('${m.id}', '❤️')">❤️</span>
+                                <span class="wa-reaction-opt" onclick="reactToChatMessage('${m.id}', '😂')">😂</span>
+                                <span class="wa-reaction-opt" onclick="reactToChatMessage('${m.id}', '🔥')">🔥</span>
+                                <span class="wa-reaction-opt" onclick="reactToChatMessage('${m.id}', '👏')">👏</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendChatTextMessage() {
+            const input = document.getElementById('chatTextInput');
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            handleChatTyping();
+            sendChatMessage(text, 'text', '');
+        }
+
+        function handleChatInputKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatTextMessage();
+            }
+        }
+
+        function sendChatMessage(text, mediaType = 'text', mediaUrl = '') {
+            if (!currentOwner) return;
+            if (!text && !mediaUrl) return;
+
+            if (!currentOwner.chatMessages) currentOwner.chatMessages = [];
+
+            const senderId = currentEmployee ? currentEmployee.id : currentOwner.id;
+            const senderName = currentEmployee ? currentEmployee.name : currentOwner.name;
+            const senderRole = currentEmployee ? 'employee' : 'owner';
+            const senderPhoto = currentEmployee ? (currentEmployee.photoData || '') : (currentOwner ? (currentOwner.photoData || '') : '');
+
+            const msgObj = {
+                id: 'msg_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+                senderId: senderId,
+                senderName: senderName,
+                senderRole: senderRole,
+                senderPhoto: senderPhoto,
+                text: text,
+                mediaType: mediaType,
+                mediaUrl: mediaUrl,
+                timestamp: new Date().toISOString(),
+                date: getTodayStr(),
+                time: getCurrentTime(),
+                reactions: {}
+            };
+
+            currentOwner.chatMessages.push(msgObj);
+            if (currentOwner.chatMessages.length > 300) currentOwner.chatMessages.shift();
+            saveOwners();
+
+            playChatSound('outgoing');
+            renderChatMessages();
+
+            // Broadcast to other tabs / windows instantly
+            if (chatBroadcastChannel) {
+                chatBroadcastChannel.postMessage({ type: 'newMessage', message: msgObj });
+            }
+            try {
+                localStorage.setItem('kjr_last_chat_event', JSON.stringify({ event: 'newMessage', message: msgObj, ts: Date.now() }));
+            } catch (e) {}
+
+            broadcastChatTyping(false);
+
+            // Cloud sync to Google Sheets
+            if (cloudApiUrl) {
+                fetch(cloudApiUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sendChatMessage', message: msgObj })
+                }).catch(err => console.warn('Cloud chat sync error:', err));
+            }
+        }
+
+        // =============================================
+        // ADVANCE "WHO IS TYPING" INDICATOR
+        // =============================================
+        function handleChatTyping() {
+            const input = document.getElementById('chatTextInput');
+            const hasText = input && input.value.trim().length > 0;
+
+            const micBtn = document.getElementById('chatMicBtn');
+            const sendBtn = document.getElementById('chatSendBtn');
+            if (micBtn && sendBtn) {
+                micBtn.style.display = hasText ? 'none' : 'flex';
+                sendBtn.style.display = 'flex';
+            }
+
+            broadcastChatTyping(hasText);
+        }
+
+        function broadcastChatTyping(isTyping) {
+            if (!currentOwner) return;
+            const senderId = currentEmployee ? currentEmployee.id : currentOwner.id;
+            const senderName = currentEmployee ? currentEmployee.name : currentOwner.name;
+
+            if (chatBroadcastChannel) {
+                chatBroadcastChannel.postMessage({
+                    type: 'typing',
+                    senderId: senderId,
+                    senderName: senderName,
+                    isTyping: isTyping
+                });
+            }
+
+            try {
+                localStorage.setItem('kjr_typing_broadcast', JSON.stringify({
+                    senderId: senderId,
+                    senderName: senderName,
+                    isTyping: isTyping,
+                    ts: Date.now()
+                }));
+            } catch (e) {}
+
+            if (isTyping) {
+                clearTimeout(chatTypingTimer);
+                chatTypingTimer = setTimeout(() => {
+                    broadcastChatTyping(false);
+                }, 2500);
+            }
+        }
+
+        function handleIncomingChatBroadcast(data) {
+            if (!data) return;
+
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+
+            // Typing broadcast
+            if (data.type === 'typing') {
+                if (data.senderId === myId) return;
+
+                const headerStatus = document.getElementById('chatHeaderStatus');
+                const typingRow = document.getElementById('chatTypingRow');
+                const typingPerson = document.getElementById('chatTypingPerson');
+
+                if (data.isTyping) {
+                    if (headerStatus) {
+                        headerStatus.innerHTML = `<span style="color:#dcf8c6;font-weight:700;"><i class="fas fa-pencil-alt"></i> ${data.senderName} is typing<span class="typing-dots"><span></span><span></span><span></span></span></span>`;
+                    }
+                    if (typingRow && typingPerson) {
+                        typingPerson.textContent = data.senderName;
+                        typingRow.style.display = 'block';
+                    }
+                } else {
+                    if (headerStatus) {
+                        const names = ['👑 ' + (currentOwner ? currentOwner.name : 'Owner')];
+                        if (currentOwner && currentOwner.employees) {
+                            currentOwner.employees.filter(e => e.isActive !== false).forEach(e => names.push(e.name));
+                        }
+                        headerStatus.innerHTML = `<span id="chatMembersSubtitle">${names.join(', ')}</span>`;
+                    }
+                    if (typingRow) typingRow.style.display = 'none';
+                }
+                return;
+            }
+
+            // New message broadcast
+            if (data.type === 'newMessage' && data.message) {
+                const msg = data.message;
+                if (!currentOwner.chatMessages) currentOwner.chatMessages = [];
+                const exists = currentOwner.chatMessages.some(m => m.id === msg.id);
+                if (!exists) {
+                    currentOwner.chatMessages.push(msg);
+                    saveOwners();
+
+                    const isChatOpen = document.getElementById('teamChatModal').classList.contains('show');
+                    if (isChatOpen) {
+                        renderChatMessages();
+                        playChatSound('incoming');
+                    } else {
+                        unreadChatCount++;
+                        updateChatBadge();
+                        playChatSound('incoming');
+                        showToast(`💬 ${msg.senderName}: ${msg.text || (msg.mediaType === 'photo' ? '📷 Photo' : '🎥 Media')}`, 'info');
+                    }
+                }
+            }
+
+            // Reaction broadcast
+            if (data.type === 'reaction' && data.msgId) {
+                const m = (currentOwner.chatMessages || []).find(x => x.id === data.msgId);
+                if (m) {
+                    if (!m.reactions) m.reactions = {};
+                    m.reactions[data.emoji] = (m.reactions[data.emoji] || 0) + 1;
+                    saveOwners();
+                    renderChatMessages();
+                }
+            }
+        }
+
+        // Attach listeners
+        if (chatBroadcastChannel) {
+            chatBroadcastChannel.onmessage = (e) => handleIncomingChatBroadcast(e.data);
+        }
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'kjr_last_chat_event' && e.newValue) {
+                try {
+                    const parsed = JSON.parse(e.newValue);
+                    if (parsed.message) handleIncomingChatBroadcast({ type: 'newMessage', message: parsed.message });
+                } catch (err) {}
+            }
+            if (e.key === 'kjr_typing_broadcast' && e.newValue) {
+                try {
+                    const parsed = JSON.parse(e.newValue);
+                    handleIncomingChatBroadcast({ type: 'typing', senderId: parsed.senderId, senderName: parsed.senderName, isTyping: parsed.isTyping });
+                } catch (err) {}
+            }
+        });
+
+        // =============================================
+        // PHOTO, VIDEO & VOICE NOTE ATTACHMENTS
+        // =============================================
+        function toggleChatAttachMenu() {
+            const menu = document.getElementById('chatAttachMenu');
+            if (menu) menu.classList.toggle('show');
+        }
+
+        function triggerChatPhotoUpload() {
+            toggleChatAttachMenu();
+            const input = document.getElementById('chatPhotoInput');
+            if (input) input.click();
+        }
+
+        function triggerChatVideoUpload() {
+            toggleChatAttachMenu();
+            const input = document.getElementById('chatVideoInput');
+            if (input) input.click();
+        }
+
+        function compressAndSendPhoto(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    const maxDim = 1200;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const compressedUrl = canvas.toDataURL('image/jpeg', 0.82);
+                    sendChatMessage('', 'photo', compressedUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleChatPhotoSelected(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            showToast('📷 Compressing & uploading photo...', 'info');
+            compressAndSendPhoto(file);
+            event.target.value = '';
+        }
+
+        function handleChatVideoSelected(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 15 * 1024 * 1024) {
+                return showToast('❌ Video size must be under 15MB', 'error');
+            }
+            showToast('🎥 Processing video clip...', 'info');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                sendChatMessage('', 'video', e.target.result);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function toggleVoiceNoteRecording() {
+            if (isVoiceRecording) {
+                stopVoiceRecording();
+            } else {
+                startVoiceRecording();
+            }
+        }
+
+        async function startVoiceRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                voiceAudioChunks = [];
+                voiceMediaRecorder = new MediaRecorder(stream);
+                voiceMediaRecorder.ondataavailable = e => { if (e.data.size > 0) voiceAudioChunks.push(e.data); };
+                voiceMediaRecorder.onstop = () => {
+                    const blob = new Blob(voiceAudioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        sendChatMessage('🎙️ Voice Note', 'audio', reader.result);
+                    };
+                    reader.readAsDataURL(blob);
+                    stream.getTracks().forEach(t => t.stop());
+                };
+                voiceMediaRecorder.start();
+                isVoiceRecording = true;
+
+                const micBtn = document.getElementById('chatMicBtn');
+                if (micBtn) {
+                    micBtn.classList.add('recording');
+                    micBtn.style.color = '#ef4444';
+                }
+                const input = document.getElementById('chatTextInput');
+                if (input) input.placeholder = '🎙️ Recording voice note... Click mic to stop & send';
+                showToast('🎙️ Recording voice note... Speak now.', 'info');
+            } catch (err) {
+                showToast('❌ Microphone permission denied or unavailable', 'error');
+            }
+        }
+
+        function stopVoiceRecording() {
+            if (voiceMediaRecorder && isVoiceRecording) {
+                voiceMediaRecorder.stop();
+                isVoiceRecording = false;
+
+                const micBtn = document.getElementById('chatMicBtn');
+                if (micBtn) {
+                    micBtn.classList.remove('recording');
+                    micBtn.style.color = '';
+                }
+                const input = document.getElementById('chatTextInput');
+                if (input) input.placeholder = 'Type a message to team...';
+                showToast('✅ Voice note sent!', 'success');
+            }
+        }
+
+        // =============================================
+        // EMOJI & SEARCH
+        // =============================================
+        function toggleChatEmojiBar() {
+            const bar = document.getElementById('chatEmojiBar');
+            if (bar) bar.classList.toggle('show');
+        }
+
+        function insertEmoji(emoji) {
+            const input = document.getElementById('chatTextInput');
+            if (input) {
+                input.value += emoji;
+                input.focus();
+                handleChatTyping();
+            }
+        }
+
+        function toggleChatSearch() {
+            const bar = document.getElementById('chatSearchBar');
+            if (!bar) return;
+            bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
+            if (bar.style.display === 'block') {
+                const input = document.getElementById('chatSearchInput');
+                if (input) { input.value = ''; input.focus(); }
+            } else {
+                renderChatMessages();
+            }
+        }
+
+        function filterChatMessages() {
+            const input = document.getElementById('chatSearchInput');
+            const q = input ? input.value : '';
+            renderChatMessages(q);
+        }
+
+        function reactToChatMessage(msgId, emoji) {
+            if (!currentOwner || !currentOwner.chatMessages) return;
+            const m = currentOwner.chatMessages.find(x => x.id === msgId);
+            if (!m) return;
+            if (!m.reactions) m.reactions = {};
+            m.reactions[emoji] = (m.reactions[emoji] || 0) + 1;
+            saveOwners();
+            renderChatMessages();
+
+            if (chatBroadcastChannel) {
+                chatBroadcastChannel.postMessage({ type: 'reaction', msgId: msgId, emoji: emoji });
+            }
+        }
+
+        // Lightbox
+        function openChatLightbox(imgUrl) {
+            const modal = document.getElementById('chatLightboxModal');
+            const img = document.getElementById('chatLightboxImg');
+            if (modal && img) {
+                img.src = imgUrl;
+                modal.classList.add('show');
+            }
+        }
+
+        function closeChatLightbox() {
+            const modal = document.getElementById('chatLightboxModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        // =============================================
+        // VOICE CALL & VIDEO CALL (CALL & VIDEO CALL)
+        // =============================================
+        function getStoreCallRoomName() {
+            const base = currentOwner && currentOwner.businessName ? currentOwner.businessName : 'kjrseva-store';
+            return 'kjrseva-' + base.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        }
+
+        function joinExternalJitsiCall(mode = 'video') {
+            const room = getStoreCallRoomName();
+            const url = `https://meet.jit.si/${room}#config.startWithAudioMuted=false&config.startWithVideoMuted=${mode === 'audio'}`;
+            window.open(url, '_blank');
+            showToast('🚀 Opened Jitsi Team Room in new tab!', 'success');
+        }
+
+        async function startVoiceCall() {
+            const modal = document.getElementById('voiceCallModal');
+            if (!modal) return;
+            modal.classList.add('show');
+
+            playChatSound('call');
+            document.getElementById('voiceCallTitle').textContent = (currentOwner.businessName || 'KJR Seva') + ' Group Voice Call';
+            document.getElementById('voiceCallStatus').textContent = 'Connecting with team...';
+            document.getElementById('voiceCallTimer').textContent = '00:00';
+
+            callSeconds = 0;
+            clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+                const secs = String(callSeconds % 60).padStart(2, '0');
+                const t = `${mins}:${secs}`;
+                const el = document.getElementById('voiceCallTimer');
+                if (el) el.textContent = t;
+            }, 1000);
+
+            try {
+                localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                document.getElementById('voiceCallStatus').textContent = '🟢 Call Connected (Live Audio)';
+            } catch (err) {
+                document.getElementById('voiceCallStatus').textContent = '⚠️ Mic not detected. Group Room Available.';
+            }
+
+            sendChatMessage('📞 Started Group Voice Call — Team is calling...', 'call');
+        }
+
+        function endVoiceCall() {
+            const modal = document.getElementById('voiceCallModal');
+            if (modal) modal.classList.remove('show');
+            clearInterval(callTimerInterval);
+            if (localAudioStream) {
+                localAudioStream.getTracks().forEach(t => t.stop());
+                localAudioStream = null;
+            }
+            showToast('Voice Call Ended', 'info');
+        }
+
+        function toggleCallMute() {
+            if (!localAudioStream) return;
+            isCallMuted = !isCallMuted;
+            localAudioStream.getAudioTracks().forEach(t => t.enabled = !isCallMuted);
+            const btn = document.getElementById('voiceMuteBtn');
+            if (btn) {
+                btn.innerHTML = isCallMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+                btn.classList.toggle('active-off', isCallMuted);
+            }
+            showToast(isCallMuted ? 'Muted' : 'Unmuted', 'info');
+        }
+
+        function toggleCallSpeaker() {
+            isSpeakerOn = !isSpeakerOn;
+            const btn = document.getElementById('voiceSpeakerBtn');
+            if (btn) {
+                btn.innerHTML = isSpeakerOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
+                btn.classList.toggle('active-off', !isSpeakerOn);
+            }
+        }
+
+        async function startVideoCall() {
+            const modal = document.getElementById('videoCallModal');
+            if (!modal) return;
+            modal.classList.add('show');
+
+            playChatSound('call');
+            callSeconds = 0;
+            clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+                const secs = String(callSeconds % 60).padStart(2, '0');
+                const t = `${mins}:${secs}`;
+                const el = document.getElementById('videoCallDuration');
+                if (el) el.textContent = t;
+            }, 1000);
+
+            try {
+                localVideoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const mainFeed = document.getElementById('mainVideoFeed');
+                const pipFeed = document.getElementById('pipVideoFeed');
+                if (mainFeed) mainFeed.srcObject = localVideoStream;
+                if (pipFeed) pipFeed.srcObject = localVideoStream;
+                showToast('📹 Camera connected. Team video call active.', 'success');
+            } catch (err) {
+                showToast('⚠️ Camera permission not granted. Use Group Video Room button.', 'warning');
+            }
+
+            sendChatMessage('📹 Started Team Live Video Call — Tap to join', 'call');
+        }
+
+        function endVideoCall() {
+            const modal = document.getElementById('videoCallModal');
+            if (modal) modal.classList.remove('show');
+            clearInterval(callTimerInterval);
+            if (localVideoStream) {
+                localVideoStream.getTracks().forEach(t => t.stop());
+                localVideoStream = null;
+            }
+            showToast('Video Call Ended', 'info');
+        }
+
+        function toggleVideoCallMic() {
+            if (!localVideoStream) return;
+            isCallMuted = !isCallMuted;
+            localVideoStream.getAudioTracks().forEach(t => t.enabled = !isCallMuted);
+            const btn = document.getElementById('videoMuteBtn');
+            if (btn) {
+                btn.innerHTML = isCallMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+                btn.classList.toggle('active-off', isCallMuted);
+            }
+            showToast(isCallMuted ? 'Mic Muted' : 'Mic Active', 'info');
+        }
+
+        function toggleVideoCallCamera() {
+            if (!localVideoStream) return;
+            isVideoCameraOff = !isVideoCameraOff;
+            localVideoStream.getVideoTracks().forEach(t => t.enabled = !isVideoCameraOff);
+            const btn = document.getElementById('videoCamToggleBtn');
+            if (btn) {
+                btn.innerHTML = isVideoCameraOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
+                btn.classList.toggle('active-off', isVideoCameraOff);
+            }
+            showToast(isVideoCameraOff ? 'Camera Off' : 'Camera On', 'info');
+        }
+
+        // =============================================
+        // CLOUD CHAT POLLING & MERGE
+        // =============================================
+        function mergeChatMessages(cloudList) {
+            if (!currentOwner || !Array.isArray(cloudList) || cloudList.length === 0) return;
+            if (!currentOwner.chatMessages) currentOwner.chatMessages = [];
+
+            let hasNew = false;
+            cloudList.forEach(cm => {
+                if (!cm || !cm.id) return;
+                const existing = currentOwner.chatMessages.find(m => m.id === cm.id);
+                if (!existing) {
+                    currentOwner.chatMessages.push(cm);
+                    hasNew = true;
+                }
+            });
+
+            if (hasNew) {
+                currentOwner.chatMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                if (currentOwner.chatMessages.length > 300) {
+                    currentOwner.chatMessages = currentOwner.chatMessages.slice(-300);
+                }
+                const modal = document.getElementById('teamChatModal');
+                if (modal && modal.classList.contains('show')) {
+                    renderChatMessages();
+                } else {
+                    unreadChatCount++;
+                    updateChatBadge();
+                }
+            }
+        }
+
+        async function pollCloudChatMessages() {
+            if (!cloudApiUrl) return;
+            try {
+                const res = await fetch(cloudApiUrl + '?action=getAll');
+                const result = await res.json();
+                if (result.status === 'success' && result.data && result.data.chatMessages) {
+                    mergeChatMessages(result.data.chatMessages);
+                }
+            } catch (err) {}
         }
 
         // =============================================
