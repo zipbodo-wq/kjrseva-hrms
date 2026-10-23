@@ -4402,6 +4402,11 @@
         let isLoggedIn = false;
         let activities = [];
 
+        function getCleanPhone(val) {
+            if (val === null || val === undefined) return '';
+            return String(val).replace(/\D/g, '').slice(-10);
+        }
+
         // =============================================
         // DEFAULT SERVICES (80+ ODISHA SEVA & CYBER SERVICES)
         // =============================================
@@ -4723,15 +4728,23 @@
                 const localEmps = currentOwner.employees || [];
                 const mergedMap = new Map();
 
-                // Add cloud employees
+                // Add cloud employees with normalized fields
                 cloudData.employees.forEach(emp => {
-                    const key = (emp.email || emp.id || '').toLowerCase().trim();
+                    if (!emp) return;
+                    emp.mobile = String(emp.mobile !== undefined && emp.mobile !== null ? emp.mobile : '');
+                    emp.email = String(emp.email || '').toLowerCase().trim();
+                    emp.name = String(emp.name || 'Staff');
+                    const key = emp.email || String(emp.id || '');
                     if (key) mergedMap.set(key, emp);
                 });
 
                 // Add local employees (preserve newly registered ones)
                 localEmps.forEach(emp => {
-                    const key = (emp.email || emp.id || '').toLowerCase().trim();
+                    if (!emp) return;
+                    emp.mobile = String(emp.mobile !== undefined && emp.mobile !== null ? emp.mobile : '');
+                    emp.email = String(emp.email || '').toLowerCase().trim();
+                    emp.name = String(emp.name || 'Staff');
+                    const key = emp.email || String(emp.id || '');
                     if (key) {
                         if (!mergedMap.has(key)) {
                             mergedMap.set(key, emp);
@@ -4943,16 +4956,34 @@
         // =============================================
         async function handleGoogleLoginResponse(response) {
             try {
-                // Decode Google ID Token payload
+                if (!response || !response.credential) {
+                    throw new Error('Google credential token was empty.');
+                }
+
+                // Decode Google ID Token payload safely with proper Base64URL padding
                 const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
+                let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) {
+                    base64 += '=';
+                }
+
+                let jsonPayload = '';
+                try {
+                    const binaryStr = atob(base64);
+                    const bytes = new Uint8Array(binaryStr.length);
+                    for (let i = 0; i < binaryStr.length; i++) {
+                        bytes[i] = binaryStr.charCodeAt(i);
+                    }
+                    jsonPayload = new TextDecoder('utf-8').decode(bytes);
+                } catch (decErr) {
+                    jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                }
 
                 const googleUser = JSON.parse(jsonPayload);
-                const googleEmail = (googleUser.email || '').toLowerCase().trim();
-                const googleName = googleUser.name || 'User';
+                const googleEmail = String(googleUser.email || '').toLowerCase().trim();
+                const googleName = String(googleUser.name || 'User');
                 const googlePhoto = googleUser.picture || null;
 
                 console.log('✅ Google Sign-In attempt:', googleEmail, googleName);
@@ -4962,8 +4993,8 @@
                 // Helper to search staff across all owner accounts in memory
                 const findStaffInMemory = () => {
                     for (let o of owners) {
-                        if (o.employees && Array.isArray(o.employees)) {
-                            let emp = o.employees.find(e => (e.email || '').toLowerCase().trim() === googleEmail && e.isActive !== false);
+                        if (o && o.employees && Array.isArray(o.employees)) {
+                            let emp = o.employees.find(e => e && String(e.email || '').toLowerCase().trim() === googleEmail && e.isActive !== false);
                             if (emp) return { emp, owner: o };
                         }
                     }
@@ -4998,6 +5029,17 @@
                     currentRole = 'employee';
                     currentOwner = staffMatch.owner;
                     currentEmployee = staffMatch.emp;
+                    currentEmployee.mobile = String(currentEmployee.mobile !== undefined && currentEmployee.mobile !== null ? currentEmployee.mobile : '');
+                    currentEmployee.email = String(currentEmployee.email || '').toLowerCase().trim();
+                    currentEmployee.name = String(currentEmployee.name || 'Staff');
+                    
+                    if (!currentOwner.workEntries) currentOwner.workEntries = [];
+                    if (!currentOwner.paymentRecords) currentOwner.paymentRecords = [];
+                    if (!currentOwner.attendance) currentOwner.attendance = [];
+                    if (!currentOwner.leaveRequests) currentOwner.leaveRequests = [];
+                    if (!currentOwner.paymentRequests) currentOwner.paymentRequests = [];
+                    if (!currentOwner.notifications) currentOwner.notifications = [];
+
                     if (googlePhoto) {
                         currentEmployee.photoData = googlePhoto;
                     }
@@ -5008,11 +5050,17 @@
                 }
 
                 // 2. CHECK IF MATCHES OWNER
-                let matchedOwner = owners.find(o => (o.email || '').toLowerCase().trim() === googleEmail);
+                let matchedOwner = owners.find(o => o && String(o.email || '').toLowerCase().trim() === googleEmail);
                 if (matchedOwner) {
                     currentRole = 'owner';
                     currentOwner = matchedOwner;
                     currentEmployee = null;
+                    if (!currentOwner.workEntries) currentOwner.workEntries = [];
+                    if (!currentOwner.paymentRecords) currentOwner.paymentRecords = [];
+                    if (!currentOwner.attendance) currentOwner.attendance = [];
+                    if (!currentOwner.leaveRequests) currentOwner.leaveRequests = [];
+                    if (!currentOwner.paymentRequests) currentOwner.paymentRequests = [];
+                    if (!currentOwner.notifications) currentOwner.notifications = [];
                     if (googlePhoto && !currentOwner.photoData) currentOwner.photoData = googlePhoto;
                     saveOwners();
                     loginSuccess();
@@ -5027,6 +5075,12 @@
                     currentOwner = owners[0];
                     currentRole = 'owner';
                     currentEmployee = null;
+                    if (!currentOwner.workEntries) currentOwner.workEntries = [];
+                    if (!currentOwner.paymentRecords) currentOwner.paymentRecords = [];
+                    if (!currentOwner.attendance) currentOwner.attendance = [];
+                    if (!currentOwner.leaveRequests) currentOwner.leaveRequests = [];
+                    if (!currentOwner.paymentRequests) currentOwner.paymentRequests = [];
+                    if (!currentOwner.notifications) currentOwner.notifications = [];
                     saveOwners();
                     loginSuccess();
                     showToast(`👑 Welcome Owner ${owners[0].name}!`, 'success');
@@ -5066,7 +5120,13 @@
 
             } catch (err) {
                 console.error('Google Auth Error:', err);
-                showToast('❌ Google Sign-In verification error', 'error');
+                showToast('❌ Google Sign-In error: ' + (err.message || 'Verification error'), 'error');
+                const msgEl = document.getElementById('loginMsg');
+                if (msgEl) {
+                    msgEl.innerHTML = `<div style="background:rgba(220,38,38,0.1);border:1.5px solid #dc2626;border-radius:var(--radius-sm);padding:10px;margin-top:8px;color:#dc2626;font-size:12px;">
+                        <strong>❌ Google Sign-In Error:</strong> ${err.message || 'Verification failed'}
+                    </div>`;
+                }
             }
         }
 
@@ -5247,43 +5307,60 @@
         });
 
         function loginSuccess() {
-            document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('sidebar').classList.add('visible');
-            document.getElementById('sidebarToggle').classList.add('visible');
-            document.getElementById('topHeader').classList.add('visible');
-            document.getElementById('globalLogoutBtn').style.display = 'inline-flex';
-            isLoggedIn = true;
+            try {
+                const loginSec = document.getElementById('loginSection');
+                if (loginSec) loginSec.style.display = 'none';
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) sidebar.classList.add('visible');
+                const toggle = document.getElementById('sidebarToggle');
+                if (toggle) toggle.classList.add('visible');
+                const header = document.getElementById('topHeader');
+                if (header) header.classList.add('visible');
+                const logoutBtn = document.getElementById('globalLogoutBtn');
+                if (logoutBtn) logoutBtn.style.display = 'inline-flex';
+                isLoggedIn = true;
 
-            const isOwner = (currentRole === 'owner' || currentEmployee === null);
+                const isOwner = (currentRole === 'owner' || currentEmployee === null);
 
-            if (isOwner) {
-                document.getElementById('pageTitleText').textContent = 'Owner Admin Dashboard';
-                document.getElementById('ownerDashboard').style.display = 'block';
-                document.getElementById('employeeDashboard').style.display = 'none';
-                const sOwner = document.getElementById('sidebarOwnerNav');
-                const sEmp = document.getElementById('sidebarEmpNav');
-                if (sOwner) sOwner.style.display = 'block';
-                if (sEmp) sEmp.style.display = 'none';
-                initOwnerDashboard();
-            } else {
-                document.getElementById('pageTitleText').textContent = 'Staff Portal — ' + currentEmployee.name;
-                document.getElementById('employeeDashboard').style.display = 'block';
-                document.getElementById('ownerDashboard').style.display = 'none';
-                const sOwner = document.getElementById('sidebarOwnerNav');
-                const sEmp = document.getElementById('sidebarEmpNav');
-                if (sOwner) sOwner.style.display = 'none';
-                if (sEmp) sEmp.style.display = 'block';
-                initEmployeeDashboard();
+                if (isOwner) {
+                    const title = document.getElementById('pageTitleText');
+                    if (title) title.textContent = 'Owner Admin Dashboard';
+                    const oDash = document.getElementById('ownerDashboard');
+                    if (oDash) oDash.style.display = 'block';
+                    const eDash = document.getElementById('employeeDashboard');
+                    if (eDash) eDash.style.display = 'none';
+                    const sOwner = document.getElementById('sidebarOwnerNav');
+                    const sEmp = document.getElementById('sidebarEmpNav');
+                    if (sOwner) sOwner.style.display = 'block';
+                    if (sEmp) sEmp.style.display = 'none';
+                    initOwnerDashboard();
+                } else {
+                    const empName = (currentEmployee && currentEmployee.name) ? currentEmployee.name : 'Staff';
+                    const title = document.getElementById('pageTitleText');
+                    if (title) title.textContent = 'Staff Portal — ' + empName;
+                    const eDash = document.getElementById('employeeDashboard');
+                    if (eDash) eDash.style.display = 'block';
+                    const oDash = document.getElementById('ownerDashboard');
+                    if (oDash) oDash.style.display = 'none';
+                    const sOwner = document.getElementById('sidebarOwnerNav');
+                    const sEmp = document.getElementById('sidebarEmpNav');
+                    if (sOwner) sOwner.style.display = 'none';
+                    if (sEmp) sEmp.style.display = 'block';
+                    initEmployeeDashboard();
+                }
+
+                const fab = document.getElementById('floatingChatFab');
+                if (fab) fab.style.display = 'flex';
+                if (typeof updateChatBadge === 'function') updateChatBadge();
+
+                addNotification('👋 Logged In', `Welcome back, ${isOwner ? (currentOwner ? currentOwner.name : 'Owner') : (currentEmployee ? currentEmployee.name : 'Staff')}!`, 'success');
+
+                // Check for cloud updates
+                if (cloudApiUrl) triggerManualSync();
+            } catch (loginErr) {
+                console.error('Error during loginSuccess UI initialization:', loginErr);
+                showToast('⚠️ Logged in with interface note: ' + loginErr.message, 'warning');
             }
-
-            const fab = document.getElementById('floatingChatFab');
-            if (fab) fab.style.display = 'flex';
-            if (typeof updateChatBadge === 'function') updateChatBadge();
-
-            addNotification('👋 Logged In', `Welcome back, ${isOwner ? currentOwner.name : currentEmployee.name}!`, 'success');
-
-            // Check for cloud updates
-            if (cloudApiUrl) triggerManualSync();
         }
 
         function showLogoutPopup() {
@@ -5775,7 +5852,7 @@
             document.getElementById('paymentAmount').value = '';
             document.getElementById('paymentRef').value = '';
 
-            const cleanPhone = (emp.mobile || '').replace(/\D/g, '').slice(-10);
+            const cleanPhone = getCleanPhone(emp.mobile);
             if (cleanPhone.length === 10) {
                 setTimeout(() => {
                     if (confirm(`✅ Payout of ₹${amt.toFixed(2)} recorded for ${emp.name}!\n\n📲 Send WhatsApp payment receipt to ${emp.name} (+91 ${cleanPhone})?`)) {
@@ -5874,7 +5951,7 @@
 
             document.getElementById('ownerPaymentBody').innerHTML = currentOwner.paymentRecords.slice().reverse().map(p => {
                 const emp = currentOwner.employees.find(e => e.id === p.employeeId);
-                const cleanPhone = emp ? (emp.mobile || '').replace(/\D/g, '').slice(-10) : '';
+                const cleanPhone = emp ? getCleanPhone(emp.mobile) : '';
                 return `
                 <tr>
                     <td>${p.date}</td>
@@ -5908,7 +5985,7 @@
                 const emp = currentOwner.employees.find(e => e.id === entry.employeeId);
                 addNotification('✅ Work Approved', `${entry.serviceName} approved for ${emp ? emp.name : 'Staff'} (₹${(entry.customerPrice || 0).toFixed(2)})`, 'success');
 
-                const cleanPhone = emp ? (emp.mobile || '').replace(/\D/g, '').slice(-10) : '';
+                const cleanPhone = emp ? getCleanPhone(emp.mobile) : '';
                 if (cleanPhone.length === 10) {
                     setTimeout(() => {
                         if (confirm(`✅ Work approved for ${emp.name}!\n\n📲 Send WhatsApp approval notification to ${emp.name} (+91 ${cleanPhone})?`)) {
@@ -6027,7 +6104,7 @@
 
             document.getElementById('employeeCountDisplay').textContent = 'Total: ' + list.length;
             document.getElementById('ownerEmployeeList').innerHTML = list.map(e => {
-                const cleanPhone = (e.mobile || '').replace(/\D/g, '').slice(-10);
+                const cleanPhone = getCleanPhone(e.mobile);
                 const hasValidPhone = cleanPhone.length === 10;
                 return `
                 <div class="employee-card">
@@ -6114,7 +6191,7 @@
             }
 
             container.innerHTML = list.map(e => {
-                const cleanPhone = (e.mobile || '').replace(/\D/g, '').slice(-10);
+                const cleanPhone = getCleanPhone(e.mobile);
                 const hasValidPhone = cleanPhone.length === 10;
                 return `
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border-color);background:var(--bg-card);border-radius:var(--radius-sm);flex-wrap:wrap;gap:6px;">
@@ -6150,7 +6227,7 @@
         function sendWhatsAppToStaff(empId) {
             const emp = currentOwner.employees.find(e => e.id === empId);
             if (!emp) return;
-            const cleanPhone = (emp.mobile || '').replace(/\D/g, '').slice(-10);
+            const cleanPhone = getCleanPhone(emp.mobile);
             if (cleanPhone.length !== 10) {
                 return showToast('⚠️ Staff does not have a valid 10-digit mobile number', 'warning');
             }
@@ -6161,7 +6238,7 @@
         function editStaffMobile(empId) {
             const emp = currentOwner.employees.find(e => e.id === empId);
             if (!emp) return;
-            const currentMob = (emp.mobile || '').replace(/\D/g, '').slice(-10);
+            const currentMob = getCleanPhone(emp.mobile);
             const newMob = prompt(`Enter 10-digit WhatsApp mobile number for ${emp.name}:`, currentMob);
             if (newMob === null) return;
             const cleanMob = newMob.replace(/\D/g, '').slice(0, 10);
@@ -6180,7 +6257,7 @@
 
         function copyAllStaffMobiles() {
             const list = currentOwner.employees || [];
-            const phones = list.map(e => (e.mobile || '').replace(/\D/g, '').slice(-10)).filter(p => p.length === 10);
+            const phones = list.map(e => getCleanPhone(e.mobile)).filter(p => p.length === 10);
             if (phones.length === 0) {
                 return showToast('⚠️ No valid staff mobile numbers found', 'warning');
             }
@@ -6197,7 +6274,7 @@
             if (list.length === 0) return showToast('No staff registered to export', 'info');
             let csv = "Name,Mobile,WhatsApp,Email,Department,Designation,Status\n";
             list.forEach(e => {
-                const cleanPhone = (e.mobile || '').replace(/\D/g, '').slice(-10);
+                const cleanPhone = getCleanPhone(e.mobile);
                 const wa = cleanPhone.length === 10 ? '91' + cleanPhone : '';
                 csv += `"${e.name}","${cleanPhone}","${wa}","${e.email}","${e.department || ''}","${e.designation || ''}","${e.isActive !== false ? 'Active' : 'Inactive'}"\n`;
             });
@@ -6210,7 +6287,7 @@
         }
 
         function sendWhatsAppPaymentVoucher(payment, emp) {
-            const cleanPhone = (emp.mobile || '').replace(/\D/g, '').slice(-10);
+            const cleanPhone = getCleanPhone(emp.mobile);
             if (cleanPhone.length !== 10) return;
             const business = currentOwner.businessName || 'KJR SEVA KENDRA';
             const msg = `*PAYMENT VOUCHER — ${business}*\n` +
@@ -6234,7 +6311,7 @@
         }
 
         function sendWhatsAppWorkApproval(entry, emp) {
-            const cleanPhone = (emp.mobile || '').replace(/\D/g, '').slice(-10);
+            const cleanPhone = getCleanPhone(emp.mobile);
             if (cleanPhone.length !== 10) return;
             const business = currentOwner.businessName || 'KJR SEVA KENDRA';
             const msg = `*WORK APPROVAL — ${business}*\n` +
@@ -6268,7 +6345,7 @@
 
         function editStaffSelfMobile() {
             if (!currentEmployee) return;
-            const currentMob = (currentEmployee.mobile || '').replace(/\D/g, '').slice(-10);
+            const currentMob = getCleanPhone(currentEmployee.mobile);
             const newMob = prompt('Enter your 10-digit WhatsApp mobile number:', currentMob);
             if (newMob === null) return;
             const clean = newMob.replace(/\D/g, '').slice(0, 10);
@@ -6322,7 +6399,7 @@
         function initEmployeeDashboard() {
             if (!currentEmployee) return;
 
-            const cleanPhone = (currentEmployee.mobile || '').replace(/\D/g, '').slice(-10);
+            const cleanPhone = getCleanPhone(currentEmployee.mobile);
             const hasValidPhone = cleanPhone.length === 10;
 
             const alertBanner = document.getElementById('empMobileAlertBanner');
@@ -6347,37 +6424,43 @@
             }
 
             // Header profile card
-            document.getElementById('empProfileDisplay').innerHTML = `
-                <div style="display:flex;align-items:center;gap:14px;">
-                    <div style="width:52px;height:52px;border-radius:50%;background:var(--secondary);color:white;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;overflow:hidden;border:2px solid var(--border-color);flex-shrink:0;">
-                        ${currentEmployee.photoData ? `<img src="${currentEmployee.photoData}" style="width:100%;height:100%;object-fit:cover;" alt="${currentEmployee.name}">` : currentEmployee.name.charAt(0)}
-                    </div>
-                    <div>
-                        <div style="font-size:16px;font-weight:800;">${currentEmployee.name}</div>
-                        <div style="font-size:11px;color:var(--text-secondary);">
-                            📧 ${currentEmployee.email} | 📱 ${hasValidPhone ? `<span style="color:#16a34a;font-weight:700;">+91 ${cleanPhone}</span>` : '<span style="color:#dc2626;font-weight:700;">No Mobile</span>'}
-                            <button class="btn btn-secondary btn-xs" onclick="editStaffSelfMobile()" style="margin-left:6px;padding:2px 8px;font-size:10px;" title="Update Mobile">
-                                <i class="fas fa-edit"></i> ${hasValidPhone ? 'Edit' : 'Add'}
-                            </button>
+            const profileDisplay = document.getElementById('empProfileDisplay');
+            if (profileDisplay) {
+                profileDisplay.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:52px;height:52px;border-radius:50%;background:var(--secondary);color:white;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;overflow:hidden;border:2px solid var(--border-color);flex-shrink:0;">
+                            ${currentEmployee.photoData ? `<img src="${currentEmployee.photoData}" style="width:100%;height:100%;object-fit:cover;" alt="${currentEmployee.name || 'Staff'}">` : (currentEmployee.name || 'Staff').charAt(0)}
                         </div>
-                        <span class="badge badge-success" style="margin-top:4px;">🟢 Logged In As Staff</span>
+                        <div>
+                            <div style="font-size:16px;font-weight:800;">${currentEmployee.name || 'Staff'}</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">
+                                📧 ${currentEmployee.email || ''} | 📱 ${hasValidPhone ? `<span style="color:#16a34a;font-weight:700;">+91 ${cleanPhone}</span>` : '<span style="color:#dc2626;font-weight:700;">No Mobile</span>'}
+                                <button class="btn btn-secondary btn-xs" onclick="editStaffSelfMobile()" style="margin-left:6px;padding:2px 8px;font-size:10px;" title="Update Mobile">
+                                    <i class="fas fa-edit"></i> ${hasValidPhone ? 'Edit' : 'Add'}
+                                </button>
+                            </div>
+                            <span class="badge badge-success" style="margin-top:4px;">🟢 Logged In As Staff</span>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
 
             // Owner / Shop Card
-            document.getElementById('empOwnerInfo').innerHTML = `
-                <div style="display:flex;align-items:center;gap:14px;">
-                    <div style="width:52px;height:52px;border-radius:var(--radius-sm);background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">
-                        🏢
+            const ownerInfo = document.getElementById('empOwnerInfo');
+            if (ownerInfo) {
+                ownerInfo.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:52px;height:52px;border-radius:var(--radius-sm);background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">
+                            🏢
+                        </div>
+                        <div>
+                            <div style="font-size:16px;font-weight:800;">${currentOwner ? (currentOwner.businessName || 'KJR Seva Kendra') : 'KJR Seva Kendra'}</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Owner: ${currentOwner ? (currentOwner.name || 'Admin') : 'Admin'}</div>
+                            <div style="font-size:10px;color:var(--text-light);">Contact: ${currentOwner ? (currentOwner.mobile || '') : ''}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-size:16px;font-weight:800;">${currentOwner.businessName || 'KJR Seva Kendra'}</div>
-                        <div style="font-size:11px;color:var(--text-secondary);">Owner: ${currentOwner.name}</div>
-                        <div style="font-size:10px;color:var(--text-light);">Contact: ${currentOwner.mobile}</div>
-                    </div>
-                </div>
-            `;
+                `;
+            }
 
             filterEmpServiceOptions();
             renderEmployeeView();
@@ -6434,11 +6517,14 @@
 
         function renderEmployeeView() {
             if (!currentEmployee) return;
+            if (!currentOwner) currentOwner = owners[0] || {};
+            if (!currentOwner.workEntries) currentOwner.workEntries = [];
+            if (!currentOwner.paymentRecords) currentOwner.paymentRecords = [];
             const empId = currentEmployee.id;
-            const myWork = currentOwner.workEntries.filter(w => w.employeeId === empId);
-            const myApprovedWork = myWork.filter(w => w.approvalStatus === 'approved');
+            const myWork = (currentOwner.workEntries || []).filter(w => w && w.employeeId === empId);
+            const myApprovedWork = myWork.filter(w => w && w.approvalStatus === 'approved');
             const totalEarned = myApprovedWork.reduce((s, w) => s + (w.employeePayment || 0), 0);
-            const totalPaid = currentOwner.paymentRecords.filter(p => p.employeeId === empId).reduce((s, p) => s + p.amount, 0);
+            const totalPaid = (currentOwner.paymentRecords || []).filter(p => p && p.employeeId === empId).reduce((s, p) => s + (p.amount || 0), 0);
             const pendingWallet = Math.max(0, totalEarned - totalPaid);
 
             // Filter submissions by Today, Month, Year, Custom Range, Pending, Approved
@@ -6889,15 +6975,23 @@
         }
 
         function refreshAllViews() {
+            if (!isLoggedIn) return;
             if (isUserOwner()) initOwnerDashboard();
             else initEmployeeDashboard();
         }
 
         function updateBadges() {
-            document.getElementById('empCountBadge').textContent = currentOwner.employees.length;
-            const pending = currentOwner.workEntries.filter(e => e.approvalStatus === 'pending').length;
-            document.getElementById('pendingBadge').textContent = pending;
-            document.getElementById('pendingBadge').style.display = pending > 0 ? 'inline' : 'none';
+            if (!currentOwner) return;
+            if (!currentOwner.employees) currentOwner.employees = [];
+            if (!currentOwner.workEntries) currentOwner.workEntries = [];
+            const empBadge = document.getElementById('empCountBadge');
+            if (empBadge) empBadge.textContent = currentOwner.employees.length;
+            const pending = currentOwner.workEntries.filter(e => e && e.approvalStatus === 'pending').length;
+            const penBadge = document.getElementById('pendingBadge');
+            if (penBadge) {
+                penBadge.textContent = pending;
+                penBadge.style.display = pending > 0 ? 'inline' : 'none';
+            }
         }
 
         // =============================================
@@ -7254,9 +7348,9 @@
             // Render Staff's Personal History
             const empHistoryBody = document.getElementById('empAttendanceHistoryBody');
             if (empHistoryBody) {
-                const myLogs = currentOwner.attendance
-                    .filter(a => a.employeeId === empId)
-                    .sort((a, b) => new Date(b.date) - new Date(a.date) || b.id.toString().localeCompare(a.id.toString()))
+                const myLogs = (currentOwner.attendance || [])
+                    .filter(a => a && a.employeeId === empId)
+                    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0) || String(b.id || '').localeCompare(String(a.id || '')))
                     .slice(0, 15);
 
                 if (myLogs.length === 0) {
@@ -7361,7 +7455,7 @@
             amtInp.max = balance;
 
             // Auto-fill UPI ID from staff phone if empty
-            const phone = (currentEmployee.mobile || '').replace(/\D/g, '').slice(-10);
+            const phone = getCleanPhone(currentEmployee.mobile);
             const savedUpi = localStorage.getItem('kjr_saved_upi_' + currentEmployee.id) || (phone ? `${phone}@upi` : '');
             const upiInp = document.getElementById('staffReqPaymentId');
             if (upiInp && !upiInp.value) upiInp.value = savedUpi;
@@ -7481,8 +7575,8 @@
             if (!tbody) return;
 
             const myReqs = (currentOwner.paymentRequests || [])
-                .filter(r => r.employeeId === currentEmployee.id)
-                .sort((a, b) => new Date(b.date) - new Date(a.date) || b.id.localeCompare(a.id));
+                .filter(r => r && r.employeeId === currentEmployee.id)
+                .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0) || String(b.id || '').localeCompare(String(a.id || '')));
 
             if (myReqs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No payment requests submitted yet. Click "Request Payment" to withdraw wallet earnings.</td></tr>';
@@ -7554,7 +7648,7 @@
             tbody.innerHTML = allReqs.map(r => {
                 const currentWallet = getEmployeeWalletBalance(r.employeeId);
                 const isPending = r.status === 'pending';
-                const cleanPhone = (r.employeeMobile || '').replace(/\D/g, '').slice(-10);
+                const cleanPhone = getCleanPhone(r.employeeMobile);
 
                 let statusHtml = '<span class="badge badge-warning">⏳ Pending</span>';
                 if (r.status === 'approved' || r.status === 'paid') statusHtml = '<span class="badge badge-success">✅ Paid</span>';
