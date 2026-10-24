@@ -9577,16 +9577,8 @@
         let activeCallTarget = null; // null means 'entire team'
         let currentRosterFilter = 'all';
 
-        function getStoreCallRoomName() {
-            const base = currentOwner && currentOwner.businessName ? currentOwner.businessName : 'kjrseva-store';
-            return 'kjrseva-' + base.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        }
-
         function joinExternalJitsiCall(mode = 'video') {
-            const room = getStoreCallRoomName();
-            const url = `https://meet.jit.si/${room}#config.startWithAudioMuted=false&config.startWithVideoMuted=${mode === 'audio'}`;
-            window.open(url, '_blank');
-            showToast('🚀 Opened Jitsi Team Room in new tab!', 'success');
+            openCallInNewTab(mode);
         }
 
         // =============================================
@@ -9689,9 +9681,6 @@
             }
         }
 
-        // =============================================
-        // VOICE CALL SCREEN & ACTIONS
-        // =============================================
         // =============================================
         // VOICE CALL SCREEN & ACTIONS
         // =============================================
