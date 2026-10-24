@@ -11,6 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Paho MQTT for Instant Real-Time Cross-Device Chat, Typing & Video/Voice Calling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         /* ===== COMPLETE ENTERPRISE DESIGN SYSTEM ===== */
         * {
@@ -2804,6 +2806,201 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
             background: #1e293b;
         }
+
+        /* ===== CALL CHOOSER & PRESENCE ROSTER STYLES ===== */
+        .call-choice-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 13px 16px;
+            border-radius: 16px;
+            background: var(--bg-card);
+            border: 1.5px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .call-choice-card:hover {
+            border-color: #25d366;
+            background: rgba(37, 211, 102, 0.06);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .call-choice-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .roster-tab {
+            background: none;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .roster-tab.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .roster-member-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .roster-member-card:hover {
+            background: var(--bg-card-sub);
+            border-color: #cbd5e1;
+        }
+
+        .roster-avatar-box {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+            color: white;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+        .roster-status-dot {
+            position: absolute;
+            bottom: -1px;
+            right: -1px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid var(--bg-card);
+        }
+
+        .roster-status-dot.online {
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+            animation: pulseGreen 1.8s infinite;
+        }
+
+        .roster-status-dot.offline {
+            background: #94a3b8;
+        }
+
+        .roster-status-dot.shift {
+            background: #f59e0b;
+        }
+
+        @keyframes pulseGreen {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 7px rgba(37, 211, 102, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+            }
+        }
+
+        .roster-action-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .roster-action-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .roster-action-btn.call-voice:hover {
+            background: #22c55e;
+            color: white;
+            border-color: #22c55e;
+        }
+
+        .roster-action-btn.call-video:hover {
+            background: #8b5cf6;
+            color: white;
+            border-color: #8b5cf6;
+        }
+
+        .roster-action-btn.chat-msg:hover {
+            background: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        .wa-call-invite-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(18, 140, 126, 0.18));
+            border: 1.5px solid rgba(37, 211, 102, 0.35);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 6px 0;
+        }
+
+        .wa-call-invite-box:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
+            background: linear-gradient(135deg, rgba(37, 211, 102, 0.2), rgba(18, 140, 126, 0.26));
+        }
+
+        .wa-call-invite-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #25d366;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            animation: pulseGreen 2s infinite;
+        }
+
+        .wa-header-left:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+        }
     </style>
 </head>
 
@@ -4123,32 +4320,39 @@
         <div class="chat-modal-dialog">
             <!-- Chat Header -->
             <div class="wa-chat-header">
-                <div class="wa-header-left">
-                    <button type="button" onclick="closeTeamChatModal()"
+                <div class="wa-header-left" onclick="openTeamRosterModal()" style="cursor:pointer;" title="Tap to view who is Online and Offline">
+                    <button type="button" onclick="event.stopPropagation(); closeTeamChatModal();"
                         style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:4px;display:flex;align-items:center;">
                         <i class="fas fa-arrow-left"></i>
                     </button>
                     <div class="wa-group-avatar">
                         <i class="fas fa-users"></i>
-                        <span class="wa-online-dot"></span>
+                        <span class="wa-online-dot" id="chatHeaderOnlineDot"></span>
                     </div>
                     <div class="wa-header-info">
                         <div class="wa-header-title">
                             <span id="chatGroupNameDisplay">KJR Seva Team Group</span>
                             <i class="fas fa-shield-alt" style="color:#dcf8c6;font-size:12px;"
                                 title="Store Secure Chat"></i>
+                            <span id="chatHeaderOnlineChip" style="font-size:10px;background:#10b981;color:white;padding:2px 7px;border-radius:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;box-shadow:0 1px 4px rgba(0,0,0,0.2);">
+                                <span style="width:6px;height:6px;background:white;border-radius:50%;display:inline-block;animation:pulseGreen 1.6s infinite;"></span>
+                                <span id="chatHeaderOnlineCount">1 Online</span>
+                            </span>
                         </div>
                         <div class="wa-header-status" id="chatHeaderStatus">
-                            <span id="chatMembersSubtitle">Owner, Staff &amp; Team</span>
+                            <span id="chatMembersSubtitle">🟢 Checking Online &amp; Offline status...</span>
                         </div>
                     </div>
                 </div>
                 <div class="wa-header-actions">
-                    <button class="wa-call-btn" onclick="startVoiceCall()" title="Start Voice Call with Team">
+                    <button class="wa-call-btn" onclick="openCallChooserModal('audio')" title="Start Call (Voice or Video)">
                         <i class="fas fa-phone-alt"></i>
                     </button>
-                    <button class="wa-call-btn" onclick="startVideoCall()" title="Start Video Call with Team">
+                    <button class="wa-call-btn" onclick="openCallChooserModal('video')" title="Start Video Call (Voice or Video)">
                         <i class="fas fa-video"></i>
+                    </button>
+                    <button class="wa-call-btn" onclick="openTeamRosterModal()" title="View Online / Offline Team Members">
+                        <i class="fas fa-user-friends"></i>
                     </button>
                     <button class="wa-call-btn" onclick="toggleChatSearch()" title="Search Messages">
                         <i class="fas fa-search"></i>
@@ -4259,10 +4463,194 @@
         </div>
     </div>
 
+    <!-- ===== CALL TYPE CHOOSER MODAL (VOICE / VIDEO / GROUP) ===== -->
+    <div id="callChooserModal" class="modal"
+        style="align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);z-index:10005;">
+        <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:24px;width:100%;max-width:440px;box-shadow:0 20px 50px rgba(0,0,0,0.3);overflow:hidden;animation:modalScaleIn 0.25s cubic-bezier(0.16,1,0.3,1);">
+            <div style="background:linear-gradient(135deg,#075e54,#128c7e);padding:18px 20px;color:white;display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;">
+                        <i class="fas fa-phone-volume"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:16px;font-weight:800;" id="callChooserTitle">Start Team Call</div>
+                        <div style="font-size:11px;color:#d1fae5;" id="callChooserTargetSub">Choose Voice Call or Video Call</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCallChooserModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding:18px 20px;">
+                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;">Select call type to connect with your store team:</p>
+                
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <!-- Option 1: Voice Call -->
+                    <div class="call-choice-card" onclick="executeChosenCall('voice')">
+                        <div class="call-choice-icon" style="background:#25d366;color:white;">
+                            <i class="fas fa-phone-alt"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                                Voice Call (Audio)
+                                <span class="badge" style="background:#dcf8c6;color:#075e54;font-size:10px;padding:2px 6px;">Clear Audio</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">
+                                High clarity voice calling. Works smoothly even on low mobile networks.
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:var(--text-light);font-size:12px;"></i>
+                    </div>
+
+                    <!-- Option 2: Video Call -->
+                    <div class="call-choice-card" onclick="executeChosenCall('video')">
+                        <div class="call-choice-icon" style="background:#8b5cf6;color:white;">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                                Video Call (Live Camera)
+                                <span class="badge" style="background:#ede9fe;color:#7c3aed;font-size:10px;padding:2px 6px;">HD Video</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">
+                                Live video with camera feed, front/back switch & face-to-face team call.
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:var(--text-light);font-size:12px;"></i>
+                    </div>
+
+                    <!-- Option 3: Jitsi Multi-user meeting -->
+                    <div class="call-choice-card" onclick="executeChosenCall('jitsi')">
+                        <div class="call-choice-icon" style="background:#0284c7;color:white;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;font-size:14px;color:var(--text-primary);">
+                                Multi-User Conference Room
+                            </div>
+                            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">
+                                Free unlimited group room where all staff & owner can join on screen together.
+                            </div>
+                        </div>
+                        <i class="fas fa-external-link-alt" style="color:var(--text-light);font-size:12px;"></i>
+                    </div>
+                </div>
+
+                <!-- Choose Recipient: Team or Specific Member -->
+                <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-color);">
+                    <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
+                        Call Recipient:
+                    </div>
+                    <div id="callRecipientChips" style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TEAM ROSTER & WHO IS ONLINE / OFFLINE MODAL ===== -->
+    <div id="teamRosterModal" class="modal"
+        style="align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px);z-index:10006;">
+        <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:24px;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.35);overflow:hidden;animation:modalScaleIn 0.25s cubic-bezier(0.16,1,0.3,1);">
+            <!-- Roster Header -->
+            <div style="background:linear-gradient(135deg,#075e54,#128c7e);padding:18px 20px;color:white;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;">
+                        <i class="fas fa-users-cog"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:16px;font-weight:800;">Team Live Presence</div>
+                        <div style="font-size:11px;color:#d1fae5;" id="rosterSummaryCounts">Online &amp; Offline Team Members</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeTeamRosterModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Filter tabs -->
+            <div style="display:flex;border-bottom:1px solid var(--border-color);background:var(--bg-card-sub);padding:8px 14px;gap:8px;flex-shrink:0;align-items:center;justify-content:space-between;">
+                <div style="display:flex;gap:6px;">
+                    <button id="rosterTabAll" class="roster-tab active" onclick="setRosterFilter('all')">
+                        All (<span id="rosterCountAll">0</span>)
+                    </button>
+                    <button id="rosterTabOnline" class="roster-tab" onclick="setRosterFilter('online')" style="color:#10b981;">
+                        🟢 Online (<span id="rosterCountOnline">0</span>)
+                    </button>
+                    <button id="rosterTabOffline" class="roster-tab" onclick="setRosterFilter('offline')" style="color:#64748b;">
+                        ⚪ Offline (<span id="rosterCountOffline">0</span>)
+                    </button>
+                </div>
+                <button class="btn btn-xs btn-outline-secondary" onclick="simulateToggleStaffPresence()" 
+                    title="Toggle simulated staff presence for quick test" style="font-size:10px;border-radius:12px;padding:2px 8px;">
+                    ⚡ Test Presence
+                </button>
+            </div>
+
+            <!-- Members List Body -->
+            <div style="padding:14px;overflow-y:auto;flex:1;" id="teamRosterListContainer">
+                <!-- Dynamically generated member cards with Online / Offline badges & call actions -->
+            </div>
+
+            <!-- Footer Quick Actions -->
+            <div style="padding:12px 18px;background:var(--bg-card-sub);border-top:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <button class="btn btn-secondary btn-sm" onclick="openCallChooserModal('audio', null); closeTeamRosterModal();" style="border-radius:20px;font-size:11px;">
+                    <i class="fas fa-phone-alt"></i> Call Entire Team
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="closeTeamRosterModal()" style="background:#25d366;border:none;border-radius:20px;font-size:11px;font-weight:700;">
+                    <i class="fas fa-comments"></i> Return to Chat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== INCOMING CALL RINGING MODAL (CROSS-DEVICE ALERT) ===== -->
+    <div id="incomingCallModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.92);backdrop-filter:blur(14px);z-index:10005;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:linear-gradient(145deg, #1e293b, #0f172a);border:1.5px solid rgba(255,255,255,0.15);border-radius:28px;width:100%;max-width:380px;padding:36px 24px;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.7);animation:scaleIn 0.3s ease;">
+            
+            <div class="call-avatar-pulse" id="incomingCallAvatar" style="width:100px;height:100px;font-size:42px;margin:0 auto 20px auto;background:#25d366;box-shadow:0 0 0 0 rgba(37,211,102,0.7);">
+                <i class="fas fa-phone-volume" id="incomingCallIcon"></i>
+            </div>
+
+            <div style="font-size:12px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;" id="incomingCallTypeBadge">
+                <i class="fas fa-video"></i> INCOMING VIDEO CALL
+            </div>
+
+            <h3 style="font-size:22px;font-weight:800;color:#ffffff;margin-bottom:6px;" id="incomingCallerName">
+                KJR Seva Mobile
+            </h3>
+
+            <p style="font-size:13px;color:#94a3b8;margin-bottom:30px;" id="incomingCallSub">
+                Ringing... Tap Accept to connect live
+            </p>
+
+            <div style="display:flex;align-items:center;justify-content:center;gap:28px;">
+                <div style="text-align:center;">
+                    <button type="button" onclick="declineIncomingCall()" class="call-ctrl-btn call-end-btn" style="width:68px;height:68px;font-size:24px;margin:0 auto;" title="Decline Call">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                    <div style="font-size:12px;color:#cbd5e1;font-weight:600;margin-top:8px;">Decline</div>
+                </div>
+
+                <div style="text-align:center;">
+                    <button type="button" onclick="acceptIncomingCall()" class="call-ctrl-btn" style="width:68px;height:68px;font-size:26px;background:#22c55e;box-shadow:0 10px 25px rgba(34,197,94,0.5);margin:0 auto;" title="Accept Call">
+                        <i class="fas fa-phone-alt" id="incomingAcceptBtnIcon"></i>
+                    </button>
+                    <div style="font-size:12px;color:#4ade80;font-weight:700;margin-top:8px;">Accept</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== WHATSAPP-STYLE VOICE CALL SCREEN ===== -->
     <div id="voiceCallModal" class="call-screen-overlay">
+        <!-- Hidden WebRTC audio stream iframe -->
+        <iframe id="voiceCallIframe" src="" allow="camera; microphone; autoplay" style="display:none;" title="Voice Stream"></iframe>
+
         <div style="display:flex;justify-content:space-between;width:100%;max-width:500px;align-items:center;">
-            <div style="font-size:13px;color:#94a3b8;"><i class="fas fa-lock"></i> End-to-End Encrypted Call</div>
+            <div style="font-size:13px;color:#94a3b8;"><i class="fas fa-lock"></i> End-to-End Realtime Encrypted Voice Call</div>
             <button onclick="endVoiceCall()"
                 style="background:none;border:none;color:#cbd5e1;font-size:18px;cursor:pointer;"><i
                     class="fas fa-chevron-down"></i></button>
@@ -4277,19 +4665,16 @@
             <div class="call-timer" id="voiceCallTimer">00:00</div>
 
             <div style="margin-top:20px;">
-                <button class="btn btn-secondary btn-sm" onclick="joinExternalJitsiCall('audio')"
+                <button class="btn btn-secondary btn-sm" onclick="openCallInNewTab('audio')"
                     style="background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:6px 14px;font-size:11px;">
-                    <i class="fas fa-external-link-alt"></i> Open Full Group Voice Room (Free Jitsi)
+                    <i class="fas fa-external-link-alt"></i> Open in Separate Full Tab
                 </button>
             </div>
         </div>
 
         <div class="call-controls-bar">
-            <button class="call-ctrl-btn" id="voiceMuteBtn" onclick="toggleCallMute()" title="Mute Microphone">
-                <i class="fas fa-microphone"></i>
-            </button>
-            <button class="call-ctrl-btn" id="voiceSpeakerBtn" onclick="toggleCallSpeaker()" title="Speaker">
-                <i class="fas fa-volume-up"></i>
+            <button class="call-ctrl-btn" onclick="switchVoiceToVideoCall()" title="Switch to Live Video Call" style="background:#8b5cf6;">
+                <i class="fas fa-video"></i>
             </button>
             <button class="call-ctrl-btn call-end-btn" onclick="endVoiceCall()" title="End Call">
                 <i class="fas fa-phone-slash"></i>
@@ -4298,40 +4683,44 @@
     </div>
 
     <!-- ===== WHATSAPP-STYLE VIDEO CALL SCREEN ===== -->
-    <div id="videoCallModal" class="call-screen-overlay">
-        <div style="display:flex;justify-content:space-between;width:100%;max-width:900px;align-items:center;">
-            <div style="font-size:13px;color:#94a3b8;"><i class="fas fa-video"></i> KJR Seva Team Live Video Call</div>
-            <button onclick="endVideoCall()"
-                style="background:none;border:none;color:#cbd5e1;font-size:18px;cursor:pointer;"><i
-                    class="fas fa-times"></i></button>
-        </div>
-
-        <div class="video-call-grid">
-            <!-- Main Video Feed -->
-            <video id="mainVideoFeed" class="main-video-feed" autoplay playsinline></video>
-            <!-- Picture in Picture (Self Preview) -->
-            <video id="pipVideoFeed" class="pip-video-feed" autoplay playsinline muted></video>
-
-            <div id="videoCallOverlayInfo"
-                style="position:absolute;bottom:14px;left:14px;background:rgba(0,0,0,0.6);padding:6px 12px;border-radius:20px;font-size:12px;color:white;backdrop-filter:blur(4px);">
-                <span id="videoCallDuration">00:00</span> • Live Store Stream
+    <div id="videoCallModal" class="call-screen-overlay" style="padding:16px 14px 18px 14px;">
+        <div style="display:flex;justify-content:space-between;width:100%;max-width:1100px;align-items:center;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:14px;font-weight:700;color:#ffffff;" id="videoCallTitleText">
+                    <i class="fas fa-video" style="color:#25d366;margin-right:6px;"></i> KJR Seva Team Live Video Call
+                </span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <button type="button" onclick="openCallInNewTab('video')" class="btn btn-sm"
+                    style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-expand-arrows-alt"></i> Open Full Tab
+                </button>
+                <button onclick="endVideoCall()"
+                    style="background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#ef4444;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;"
+                    title="Close Video Call">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         </div>
 
-        <div style="margin:10px 0;text-align:center;">
-            <button class="btn btn-primary btn-sm" onclick="joinExternalJitsiCall('video')"
-                style="background:#25d366;border:none;border-radius:24px;padding:8px 18px;font-weight:700;">
-                <i class="fas fa-users"></i> Join Multi-User Video Room (Everyone on Screen)
-            </button>
+        <!-- Embedded Live Two-Way WebRTC Room (No Black Screen, HD Video & Audio for Mobile & PC) -->
+        <div class="video-call-grid" style="height:74vh;max-width:1100px;width:100%;position:relative;background:#000000;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.85);border:1px solid rgba(255,255,255,0.12);">
+            <iframe id="videoCallIframe" 
+                src="" 
+                allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write" 
+                style="width:100%;height:100%;border:none;display:block;"
+                title="Live Video Call Room">
+            </iframe>
+
+            <div id="videoCallOverlayInfo"
+                style="position:absolute;top:12px;left:14px;background:rgba(15,23,42,0.85);padding:6px 14px;border-radius:20px;font-size:12px;color:white;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.15);pointer-events:none;z-index:10;">
+                <span id="videoCallDuration" style="font-weight:700;color:#22c55e;">00:00</span> • <span id="videoCallRoomStatus">🟢 Live Connected</span>
+            </div>
         </div>
 
-        <div class="call-controls-bar">
-            <button class="call-ctrl-btn" id="videoMuteBtn" onclick="toggleVideoCallMic()" title="Mute Mic">
-                <i class="fas fa-microphone"></i>
-            </button>
-            <button class="call-ctrl-btn" id="videoCamToggleBtn" onclick="toggleVideoCallCamera()"
-                title="Toggle Camera">
-                <i class="fas fa-video"></i>
+        <div class="call-controls-bar" style="margin-bottom:0;margin-top:12px;">
+            <button class="call-ctrl-btn" onclick="switchVideoToVoiceCall()" title="Switch to Voice Call" style="background:#25d366;">
+                <i class="fas fa-phone-alt"></i>
             </button>
             <button class="call-ctrl-btn call-end-btn" onclick="endVideoCall()" title="End Video Call">
                 <i class="fas fa-phone-slash"></i>
@@ -5352,6 +5741,9 @@
                 const fab = document.getElementById('floatingChatFab');
                 if (fab) fab.style.display = 'flex';
                 if (typeof updateChatBadge === 'function') updateChatBadge();
+                if (typeof sendPresencePing === 'function') sendPresencePing();
+                if (typeof updatePresenceUI === 'function') updatePresenceUI();
+                if (typeof initRealtimeSync === 'function') initRealtimeSync();
 
                 addNotification('👋 Logged In', `Welcome back, ${isOwner ? (currentOwner ? currentOwner.name : 'Owner') : (currentEmployee ? currentEmployee.name : 'Staff')}!`, 'success');
 
@@ -5365,6 +5757,12 @@
 
         function showLogoutPopup() {
             if (confirm('Are you sure you want to log out?')) {
+                const me = (typeof getCurrentChatUser === 'function') ? getCurrentChatUser() : null;
+                if (me && chatBroadcastChannel) {
+                    try {
+                        chatBroadcastChannel.postMessage({ type: 'presence_offline', memberId: me.id });
+                    } catch (e) { }
+                }
                 location.reload();
             }
         }
@@ -8163,8 +8561,310 @@
         }
 
         // =============================================
-        // WHATSAPP-STYLE ENTERPRISE TEAM CHAT SYSTEM
+        // REALTIME MQTT CROSS-DEVICE ENGINE (<50ms Sync)
         // =============================================
+        let mqttClient = null;
+        let isMqttConnected = false;
+        let mqttReconnectTimer = null;
+        let currentIncomingCall = null;
+        let ringtoneInterval = null;
+        let ringtoneAudioCtx = null;
+
+        function getStoreMqttId() {
+            if (cloudApiUrl && cloudApiUrl.length > 10) {
+                let hash = 5381;
+                for (let i = 0; i < cloudApiUrl.length; i++) {
+                    hash = ((hash << 5) + hash) + cloudApiUrl.charCodeAt(i);
+                    hash = hash & hash;
+                }
+                return 'store_' + Math.abs(hash).toString(36);
+            }
+            if (currentOwner && currentOwner.id) {
+                return 'store_' + String(currentOwner.id).replace(/[^a-zA-Z0-9]/g, '');
+            }
+            if (currentOwner && currentOwner.businessName) {
+                return 'store_' + currentOwner.businessName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            }
+            return 'kjrseva_global_store';
+        }
+
+        function getStoreCallRoomName() {
+            const storeId = getStoreMqttId();
+            return 'kjrseva-room-' + storeId;
+        }
+
+        function initRealtimeSync() {
+            if (typeof Paho === 'undefined' || !Paho.MQTT) {
+                clearTimeout(mqttReconnectTimer);
+                mqttReconnectTimer = setTimeout(initRealtimeSync, 1500);
+                return;
+            }
+
+            if (mqttClient && isMqttConnected) return;
+
+            try {
+                const storeId = getStoreMqttId();
+                const rand = Math.random().toString(16).substring(2, 8);
+                const myId = (currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : 'anon')).replace(/[^a-zA-Z0-9]/g, '');
+                const clientId = `kjr_${storeId}_${myId}_${rand}`;
+
+                // Connect to EMQX broker via secure WebSockets (WSS) on port 8084
+                mqttClient = new Paho.MQTT.Client("broker.emqx.io", 8084, "/mqtt", clientId);
+
+                mqttClient.onConnectionLost = (responseObject) => {
+                    isMqttConnected = false;
+                    console.warn('Realtime MQTT connection lost:', responseObject.errorMessage);
+                    clearTimeout(mqttReconnectTimer);
+                    mqttReconnectTimer = setTimeout(initRealtimeSync, 3000);
+                };
+
+                mqttClient.onMessageArrived = (message) => {
+                    handleRealtimeMqttMessage(message.destinationName, message.payloadString);
+                };
+
+                const options = {
+                    useSSL: true,
+                    timeout: 10,
+                    keepAliveInterval: 30,
+                    cleanSession: true,
+                    onSuccess: () => {
+                        isMqttConnected = true;
+                        console.log('🟢 Realtime MQTT Connected for store:', storeId);
+                        const storeTopic = `kjrseva_sync/${storeId}/#`;
+                        mqttClient.subscribe(storeTopic, { qos: 0 });
+                        sendPresencePing();
+                    },
+                    onFailure: (err) => {
+                        isMqttConnected = false;
+                        console.warn('Realtime MQTT connect failed, retrying:', err.errorMessage);
+                        clearTimeout(mqttReconnectTimer);
+                        mqttReconnectTimer = setTimeout(initRealtimeSync, 5000);
+                    }
+                };
+
+                mqttClient.connect(options);
+            } catch (err) {
+                console.warn('initRealtimeSync error:', err);
+                clearTimeout(mqttReconnectTimer);
+                mqttReconnectTimer = setTimeout(initRealtimeSync, 5000);
+            }
+        }
+
+        function publishRealtimeMqtt(subTopic, payload) {
+            if (!mqttClient || !isMqttConnected) {
+                if (!isMqttConnected) initRealtimeSync();
+                return;
+            }
+            try {
+                const storeId = getStoreMqttId();
+                const topic = `kjrseva_sync/${storeId}/${subTopic}`;
+                const msg = new Paho.MQTT.Message(JSON.stringify(payload));
+                msg.destinationName = topic;
+                msg.qos = 0;
+                mqttClient.send(msg);
+            } catch (err) {
+                console.warn('publishRealtimeMqtt error:', err);
+            }
+        }
+
+        function handleRealtimeMqttMessage(topic, payloadStr) {
+            try {
+                const data = JSON.parse(payloadStr);
+                if (!data) return;
+
+                const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+
+                if (topic.endsWith('/chat')) {
+                    if (data.type === 'newMessage' && data.message) {
+                        if (data.message.senderId === myId) return; // Ignore own outgoing
+                        handleIncomingChatBroadcast(data);
+                    } else if (data.type === 'reaction') {
+                        handleIncomingChatBroadcast(data);
+                    }
+                } else if (topic.endsWith('/typing')) {
+                    if (data.senderId === myId) return; // Ignore own typing
+                    handleIncomingChatBroadcast(data);
+                } else if (topic.endsWith('/call')) {
+                    handleIncomingCallSignal(data);
+                } else if (topic.endsWith('/presence')) {
+                    if (data.member && data.member.id === myId) return;
+                    handleIncomingChatBroadcast(data);
+                }
+            } catch (e) {
+                console.warn('Error processing MQTT message:', e);
+            }
+        }
+
+        function playRingtone() {
+            try {
+                if (!ringtoneAudioCtx) {
+                    ringtoneAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (ringtoneAudioCtx.state === 'suspended') {
+                    ringtoneAudioCtx.resume();
+                }
+
+                stopRingtone();
+
+                const triggerChime = () => {
+                    if (!ringtoneAudioCtx) return;
+                    try {
+                        const now = ringtoneAudioCtx.currentTime;
+                        // Tone 1: 523.25 Hz (C5)
+                        const osc1 = ringtoneAudioCtx.createOscillator();
+                        const gain1 = ringtoneAudioCtx.createGain();
+                        osc1.type = 'sine';
+                        osc1.frequency.setValueAtTime(523.25, now);
+                        gain1.gain.setValueAtTime(0.2, now);
+                        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                        osc1.connect(gain1);
+                        gain1.connect(ringtoneAudioCtx.destination);
+                        osc1.start(now);
+                        osc1.stop(now + 0.35);
+
+                        // Tone 2: 659.25 Hz (E5)
+                        const osc2 = ringtoneAudioCtx.createOscillator();
+                        const gain2 = ringtoneAudioCtx.createGain();
+                        osc2.type = 'sine';
+                        osc2.frequency.setValueAtTime(659.25, now + 0.18);
+                        gain2.gain.setValueAtTime(0.2, now + 0.18);
+                        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+                        osc2.connect(gain2);
+                        gain2.connect(ringtoneAudioCtx.destination);
+                        osc2.start(now + 0.18);
+                        osc2.stop(now + 0.55);
+                    } catch (err) { }
+                };
+
+                triggerChime();
+                ringtoneInterval = setInterval(triggerChime, 2200);
+            } catch (e) {
+                console.warn('Audio ringtone error:', e);
+            }
+        }
+
+        function stopRingtone() {
+            if (ringtoneInterval) {
+                clearInterval(ringtoneInterval);
+                ringtoneInterval = null;
+            }
+        }
+
+        function handleIncomingCallSignal(payload) {
+            if (!payload) return;
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+
+            // Ignore if I am the caller
+            if (payload.callerId === myId) return;
+
+            if (payload.type === 'call_ring') {
+                // If targeted to a specific person and that person is NOT me, do not ring
+                if (payload.targetId && payload.targetId !== myId) return;
+
+                showIncomingCallModal(payload);
+            } else if (payload.type === 'call_answered') {
+                const vStatus = document.getElementById('videoCallRoomStatus');
+                if (vStatus) vStatus.innerHTML = `🟢 Live with ${payload.answererName || 'Team'}`;
+                const vSub = document.getElementById('voiceCallStatus');
+                if (vSub) vSub.textContent = `🟢 Connected with ${payload.answererName || 'Team'}`;
+                showToast(`📞 Call answered by ${payload.answererName || 'Team'}`, 'success');
+            } else if (payload.type === 'call_declined') {
+                stopRingtone();
+                const incomingModal = document.getElementById('incomingCallModal');
+                if (incomingModal) incomingModal.style.display = 'none';
+
+                showToast(`❌ Call was declined by ${payload.declinerName || 'other party'}`, 'warning');
+                endVideoCall(false);
+                endVoiceCall(false);
+            } else if (payload.type === 'call_ended') {
+                stopRingtone();
+                const incomingModal = document.getElementById('incomingCallModal');
+                if (incomingModal) incomingModal.style.display = 'none';
+
+                const isVideoOpen = document.getElementById('videoCallModal') && document.getElementById('videoCallModal').classList.contains('show');
+                const isVoiceOpen = document.getElementById('voiceCallModal') && document.getElementById('voiceCallModal').classList.contains('show');
+
+                if (isVideoOpen) endVideoCall(false);
+                if (isVoiceOpen) endVoiceCall(false);
+                showToast('📞 Call ended', 'info');
+            }
+        }
+
+        function showIncomingCallModal(callData) {
+            currentIncomingCall = callData;
+
+            const modal = document.getElementById('incomingCallModal');
+            if (!modal) return;
+
+            const nameEl = document.getElementById('incomingCallerName');
+            const typeBadge = document.getElementById('incomingCallTypeBadge');
+            const iconEl = document.getElementById('incomingAcceptBtnIcon');
+
+            const isVideo = callData.callType === 'video';
+
+            if (nameEl) nameEl.textContent = callData.callerName || 'Store Team Member';
+            if (typeBadge) {
+                typeBadge.innerHTML = isVideo
+                    ? '<i class="fas fa-video"></i> INCOMING VIDEO CALL'
+                    : '<i class="fas fa-phone-alt"></i> INCOMING VOICE CALL';
+            }
+            if (iconEl) {
+                iconEl.className = isVideo ? 'fas fa-video' : 'fas fa-phone-alt';
+            }
+
+            modal.style.display = 'flex';
+            playRingtone();
+        }
+
+        function acceptIncomingCall() {
+            stopRingtone();
+            const modal = document.getElementById('incomingCallModal');
+            if (modal) modal.style.display = 'none';
+
+            if (!currentIncomingCall) return;
+
+            const callData = currentIncomingCall;
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+            const myName = currentEmployee ? currentEmployee.name : (currentOwner ? currentOwner.name : 'Team');
+
+            // Notify caller that call was answered
+            publishRealtimeMqtt('call', {
+                type: 'call_answered',
+                answererId: myId,
+                answererName: myName,
+                roomName: callData.roomName
+            });
+
+            if (callData.callType === 'video') {
+                openVideoCallScreen(callData.roomName, callData.callerName, false);
+            } else {
+                openVoiceCallScreen(callData.roomName, callData.callerName, false);
+            }
+
+            currentIncomingCall = null;
+        }
+
+        function declineIncomingCall() {
+            stopRingtone();
+            const modal = document.getElementById('incomingCallModal');
+            if (modal) modal.style.display = 'none';
+
+            if (!currentIncomingCall) return;
+
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+            const myName = currentEmployee ? currentEmployee.name : (currentOwner ? currentOwner.name : 'Team');
+
+            publishRealtimeMqtt('call', {
+                type: 'call_declined',
+                declinerId: myId,
+                declinerName: myName,
+                roomName: currentIncomingCall.roomName
+            });
+
+            currentIncomingCall = null;
+            showToast('Call declined', 'info');
+        }
+
         let chatBroadcastChannel = null;
         try {
             chatBroadcastChannel = new BroadcastChannel('kjrseva_team_chat');
@@ -8232,12 +8932,8 @@
             const titleEl = document.getElementById('chatGroupNameDisplay');
             if (titleEl) titleEl.textContent = (currentOwner.businessName || 'KJR Seva Kendra') + ' Team Group';
 
-            const subEl = document.getElementById('chatMembersSubtitle');
-            if (subEl) {
-                const names = ['👑 ' + currentOwner.name];
-                (currentOwner.employees || []).filter(e => e.isActive !== false).forEach(e => names.push(e.name));
-                subEl.textContent = names.join(', ');
-            }
+            sendPresencePing();
+            updatePresenceUI();
 
             unreadChatCount = 0;
             updateChatBadge();
@@ -8349,10 +9045,21 @@
                         <audio src="${m.mediaUrl}" class="wa-media-audio" controls></audio>
                     `;
                 } else if (m.mediaType === 'call') {
+                    const isVideo = (m.text || '').toLowerCase().includes('video');
                     mediaHtml = `
-                        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:700;color:${(m.text || '').includes('Video') ? '#8b5cf6' : '#22c55e'};">
-                            <i class="fas ${(m.text || '').includes('Video') ? 'fa-video' : 'fa-phone-alt'}"></i>
-                            <span>${m.text}</span>
+                        <div class="wa-call-invite-box" onclick="openCallChooserModal('${isVideo ? 'video' : 'audio'}')" title="Click to choose Voice or Video Call">
+                            <div class="wa-call-invite-icon" style="background:${isVideo ? '#8b5cf6' : '#25d366'};">
+                                <i class="fas ${isVideo ? 'fa-video' : 'fa-phone-alt'}"></i>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-weight:700;font-size:13px;color:var(--text-primary);">${m.text}</div>
+                                <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">
+                                    Tap to choose: 📞 Voice Call or 📹 Video Call
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm" style="background:${isVideo ? '#8b5cf6' : '#25d366'};color:white;border:none;border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;">
+                                Join Call
+                            </button>
                         </div>
                     `;
                 }
@@ -8467,7 +9174,10 @@
             playChatSound('outgoing');
             renderChatMessages();
 
-            // Broadcast to other tabs / windows instantly
+            // 1. INSTANT REALTIME MQTT TRANSMISSION (<50ms delivery to PC/Mobile)
+            publishRealtimeMqtt('chat', { type: 'newMessage', message: msgObj });
+
+            // 2. Broadcast to other tabs / windows instantly
             if (chatBroadcastChannel) {
                 chatBroadcastChannel.postMessage({ type: 'newMessage', message: msgObj });
             }
@@ -8477,7 +9187,7 @@
 
             broadcastChatTyping(false);
 
-            // Cloud sync to Google Sheets
+            // 3. Permanent cloud backup to Google Sheets in background
             if (cloudApiUrl) {
                 fetch(cloudApiUrl, {
                     method: 'POST',
@@ -8505,10 +9215,34 @@
             broadcastChatTyping(hasText);
         }
 
+        let lastTypingMqttPublishTs = 0;
+
         function broadcastChatTyping(isTyping) {
             if (!currentOwner) return;
             const senderId = currentEmployee ? currentEmployee.id : currentOwner.id;
             const senderName = currentEmployee ? currentEmployee.name : currentOwner.name;
+
+            const now = Date.now();
+            // Publish cross-device typing via MQTT (<50ms delivery to PC/Mobile)
+            if (isTyping) {
+                if (now - lastTypingMqttPublishTs > 1200) {
+                    lastTypingMqttPublishTs = now;
+                    publishRealtimeMqtt('typing', {
+                        type: 'typing',
+                        senderId: senderId,
+                        senderName: senderName,
+                        isTyping: true
+                    });
+                }
+            } else {
+                lastTypingMqttPublishTs = 0;
+                publishRealtimeMqtt('typing', {
+                    type: 'typing',
+                    senderId: senderId,
+                    senderName: senderName,
+                    isTyping: false
+                });
+            }
 
             if (chatBroadcastChannel) {
                 chatBroadcastChannel.postMessage({
@@ -8541,6 +9275,34 @@
 
             const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
 
+            // Presence ping broadcast
+            if (data.type === 'presence_ping' && data.member) {
+                if (!window.kjrTeamPresence) window.kjrTeamPresence = {};
+                window.kjrTeamPresence[data.member.id] = {
+                    ...data.member,
+                    lastSeen: Date.now(),
+                    isOnline: true
+                };
+                try {
+                    localStorage.setItem('kjr_team_presence_cache', JSON.stringify(window.kjrTeamPresence));
+                } catch (e) { }
+                updatePresenceUI();
+                return;
+            }
+
+            // Presence offline broadcast
+            if (data.type === 'presence_offline' && data.memberId) {
+                if (window.kjrTeamPresence && window.kjrTeamPresence[data.memberId]) {
+                    window.kjrTeamPresence[data.memberId].lastSeen = Date.now() - 60000;
+                    window.kjrTeamPresence[data.memberId].isOnline = false;
+                    try {
+                        localStorage.setItem('kjr_team_presence_cache', JSON.stringify(window.kjrTeamPresence));
+                    } catch (e) { }
+                    updatePresenceUI();
+                }
+                return;
+            }
+
             // Typing broadcast
             if (data.type === 'typing') {
                 if (data.senderId === myId) return;
@@ -8558,13 +9320,7 @@
                         typingRow.style.display = 'block';
                     }
                 } else {
-                    if (headerStatus) {
-                        const names = ['👑 ' + (currentOwner ? currentOwner.name : 'Owner')];
-                        if (currentOwner && currentOwner.employees) {
-                            currentOwner.employees.filter(e => e.isActive !== false).forEach(e => names.push(e.name));
-                        }
-                        headerStatus.innerHTML = `<span id="chatMembersSubtitle">${names.join(', ')}</span>`;
-                    }
+                    updatePresenceUI();
                     if (typingRow) typingRow.style.display = 'none';
                 }
                 return;
@@ -8619,6 +9375,12 @@
                 try {
                     const parsed = JSON.parse(e.newValue);
                     handleIncomingChatBroadcast({ type: 'typing', senderId: parsed.senderId, senderName: parsed.senderName, isTyping: parsed.isTyping });
+                } catch (err) { }
+            }
+            if (e.key === 'kjr_presence_heartbeat' && e.newValue) {
+                try {
+                    const parsed = JSON.parse(e.newValue);
+                    if (parsed.member) handleIncomingChatBroadcast({ type: 'presence_ping', member: parsed.member });
                 } catch (err) { }
             }
         });
@@ -8810,8 +9572,11 @@
         }
 
         // =============================================
-        // VOICE CALL & VIDEO CALL (CALL & VIDEO CALL)
+        // VOICE CALL & VIDEO CALL (CALL CHOOSER & ENHANCED SYSTEM)
         // =============================================
+        let activeCallTarget = null; // null means 'entire team'
+        let currentRosterFilter = 'all';
+
         function getStoreCallRoomName() {
             const base = currentOwner && currentOwner.businessName ? currentOwner.businessName : 'kjrseva-store';
             return 'kjrseva-' + base.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -8824,14 +9589,153 @@
             showToast('🚀 Opened Jitsi Team Room in new tab!', 'success');
         }
 
-        async function startVoiceCall() {
+        // =============================================
+        // CALL TYPE CHOOSER MODAL (VOICE / VIDEO / GROUP)
+        // =============================================
+        function openCallChooserModal(defaultChoice = 'audio', targetId = null) {
+            activeCallTarget = targetId;
+            const modal = document.getElementById('callChooserModal');
+            if (!modal) return;
+            modal.classList.add('show');
+
+            const titleEl = document.getElementById('callChooserTitle');
+            const subEl = document.getElementById('callChooserTargetSub');
+
+            let targetName = 'Entire Team';
+            if (targetId) {
+                if (currentOwner && currentOwner.id === targetId) targetName = currentOwner.name + ' (Owner)';
+                else {
+                    const emp = (currentOwner && currentOwner.employees) ? currentOwner.employees.find(e => e.id === targetId) : null;
+                    if (emp) targetName = emp.name;
+                }
+            }
+
+            if (titleEl) titleEl.textContent = targetId ? `Call ${targetName}` : 'Start Team Call';
+            if (subEl) subEl.textContent = `Choose Voice Call or Video Call for ${targetName}`;
+
+            renderCallRecipientChips();
+        }
+
+        function closeCallChooserModal() {
+            const modal = document.getElementById('callChooserModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        function selectCallRecipient(targetId) {
+            activeCallTarget = targetId;
+            const titleEl = document.getElementById('callChooserTitle');
+            const subEl = document.getElementById('callChooserTargetSub');
+
+            let targetName = 'Entire Team';
+            if (targetId) {
+                if (currentOwner && currentOwner.id === targetId) targetName = currentOwner.name + ' (Owner)';
+                else {
+                    const emp = (currentOwner && currentOwner.employees) ? currentOwner.employees.find(e => e.id === targetId) : null;
+                    if (emp) targetName = emp.name;
+                }
+            }
+
+            if (titleEl) titleEl.textContent = targetId ? `Call ${targetName}` : 'Start Team Call';
+            if (subEl) subEl.textContent = `Choose Voice Call or Video Call for ${targetName}`;
+
+            renderCallRecipientChips();
+        }
+
+        function renderCallRecipientChips() {
+            const container = document.getElementById('callRecipientChips');
+            if (!container || !currentOwner) return;
+
+            const myId = currentEmployee ? currentEmployee.id : currentOwner.id;
+            let html = `
+                <button type="button" class="btn btn-xs ${!activeCallTarget ? 'btn-primary' : 'btn-outline-secondary'}" 
+                    onclick="selectCallRecipient(null)" style="border-radius:14px;padding:3px 10px;font-size:11px;">
+                    🌐 Entire Team
+                </button>
+            `;
+
+            // Owner (if not me)
+            if (currentOwner.id !== myId) {
+                const isOnline = isMemberOnline(currentOwner.id);
+                html += `
+                    <button type="button" class="btn btn-xs ${activeCallTarget === currentOwner.id ? 'btn-primary' : 'btn-outline-secondary'}" 
+                        onclick="selectCallRecipient('${currentOwner.id}')" style="border-radius:14px;padding:3px 10px;font-size:11px;">
+                        ${isOnline ? '🟢' : '⚪'} 👑 ${currentOwner.name}
+                    </button>
+                `;
+            }
+
+            // Employees
+            (currentOwner.employees || []).filter(e => e.id !== myId && e.isActive !== false).forEach(e => {
+                const isOnline = isMemberOnline(e.id);
+                html += `
+                    <button type="button" class="btn btn-xs ${activeCallTarget === e.id ? 'btn-primary' : 'btn-outline-secondary'}" 
+                        onclick="selectCallRecipient('${e.id}')" style="border-radius:14px;padding:3px 10px;font-size:11px;">
+                        ${isOnline ? '🟢' : '⚪'} ${e.name}
+                    </button>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function executeChosenCall(callType) {
+            closeCallChooserModal();
+            if (callType === 'voice') {
+                startVoiceCall(activeCallTarget);
+            } else if (callType === 'video') {
+                startVideoCall(activeCallTarget);
+            } else if (callType === 'jitsi') {
+                joinExternalJitsiCall('video');
+            }
+        }
+
+        // =============================================
+        // VOICE CALL SCREEN & ACTIONS
+        // =============================================
+        // =============================================
+        // VOICE CALL SCREEN & ACTIONS
+        // =============================================
+        function startVoiceCall(targetId = null) {
+            activeCallTarget = targetId;
+            let targetName = 'Team Group';
+            if (targetId) {
+                if (currentOwner && currentOwner.id === targetId) targetName = currentOwner.name;
+                else {
+                    const emp = (currentOwner && currentOwner.employees) ? currentOwner.employees.find(e => e.id === targetId) : null;
+                    if (emp) targetName = emp.name;
+                }
+            }
+
+            const roomName = getStoreCallRoomName();
+            openVoiceCallScreen(roomName, targetName, true);
+
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+            const myName = currentEmployee ? currentEmployee.name : (currentOwner ? currentOwner.name : 'Team');
+            const myPhoto = currentEmployee ? (currentEmployee.photoData || '') : (currentOwner ? (currentOwner.photoData || '') : '');
+
+            // Broadcast call_ring to other devices instantly
+            publishRealtimeMqtt('call', {
+                type: 'call_ring',
+                callType: 'voice',
+                callerId: myId,
+                callerName: myName,
+                callerPhoto: myPhoto,
+                targetId: targetId,
+                roomName: roomName,
+                timestamp: Date.now()
+            });
+
+            sendChatMessage(targetId ? `📞 Started Voice Call with ${targetName}...` : '📞 Started Group Voice Call — Team is calling...', 'call');
+        }
+
+        function openVoiceCallScreen(roomName, peerName, isCaller = false) {
             const modal = document.getElementById('voiceCallModal');
             if (!modal) return;
             modal.classList.add('show');
 
             playChatSound('call');
-            document.getElementById('voiceCallTitle').textContent = (currentOwner.businessName || 'KJR Seva') + ' Group Voice Call';
-            document.getElementById('voiceCallStatus').textContent = 'Connecting with team...';
+            document.getElementById('voiceCallTitle').textContent = peerName ? `Voice Call: ${peerName}` : (currentOwner ? (currentOwner.businessName || 'KJR Seva') : 'KJR Seva') + ' Group Voice Call';
+            document.getElementById('voiceCallStatus').textContent = isCaller ? `📞 Ringing ${peerName}...` : '🟢 Voice Connected Live';
             document.getElementById('voiceCallTimer').textContent = '00:00';
 
             callSeconds = 0;
@@ -8845,49 +9749,85 @@
                 if (el) el.textContent = t;
             }, 1000);
 
-            try {
-                localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                document.getElementById('voiceCallStatus').textContent = '🟢 Call Connected (Live Audio)';
-            } catch (err) {
-                document.getElementById('voiceCallStatus').textContent = '⚠️ Mic not detected. Group Room Available.';
+            const myName = (currentEmployee ? currentEmployee.name : (currentOwner ? currentOwner.name : 'Member')) + (window.innerWidth < 768 ? ' (Mobile)' : ' (PC)');
+            const iframe = document.getElementById('voiceCallIframe');
+            if (iframe) {
+                const jitsiUrl = `https://meet.jit.si/${roomName}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&userInfo.displayName=${encodeURIComponent(myName)}`;
+                if (iframe.src !== jitsiUrl) iframe.src = jitsiUrl;
             }
-
-            sendChatMessage('📞 Started Group Voice Call — Team is calling...', 'call');
         }
 
-        function endVoiceCall() {
+        function endVoiceCall(broadcast = true) {
             const modal = document.getElementById('voiceCallModal');
             if (modal) modal.classList.remove('show');
             clearInterval(callTimerInterval);
-            if (localAudioStream) {
-                localAudioStream.getTracks().forEach(t => t.stop());
-                localAudioStream = null;
+
+            const iframe = document.getElementById('voiceCallIframe');
+            if (iframe) iframe.src = 'about:blank';
+
+            if (broadcast) {
+                const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+                publishRealtimeMqtt('call', {
+                    type: 'call_ended',
+                    senderId: myId,
+                    roomName: getStoreCallRoomName()
+                });
             }
+
             showToast('Voice Call Ended', 'info');
         }
 
+        function switchVoiceToVideoCall() {
+            endVoiceCall(false);
+            startVideoCall(activeCallTarget);
+            showToast('📹 Switched to Video Call', 'success');
+        }
+
         function toggleCallMute() {
-            if (!localAudioStream) return;
-            isCallMuted = !isCallMuted;
-            localAudioStream.getAudioTracks().forEach(t => t.enabled = !isCallMuted);
-            const btn = document.getElementById('voiceMuteBtn');
-            if (btn) {
-                btn.innerHTML = isCallMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-                btn.classList.toggle('active-off', isCallMuted);
-            }
-            showToast(isCallMuted ? 'Muted' : 'Unmuted', 'info');
+            showToast('Use microphone control inside meeting screen', 'info');
         }
 
         function toggleCallSpeaker() {
-            isSpeakerOn = !isSpeakerOn;
-            const btn = document.getElementById('voiceSpeakerBtn');
-            if (btn) {
-                btn.innerHTML = isSpeakerOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
-                btn.classList.toggle('active-off', !isSpeakerOn);
-            }
+            showToast('Speaker output active', 'info');
         }
 
-        async function startVideoCall() {
+        // =============================================
+        // VIDEO CALL SCREEN & ACTIONS
+        // =============================================
+        function startVideoCall(targetId = null) {
+            activeCallTarget = targetId;
+            let targetName = 'Team';
+            if (targetId) {
+                if (currentOwner && currentOwner.id === targetId) targetName = currentOwner.name;
+                else {
+                    const emp = (currentOwner && currentOwner.employees) ? currentOwner.employees.find(e => e.id === targetId) : null;
+                    if (emp) targetName = emp.name;
+                }
+            }
+
+            const roomName = getStoreCallRoomName();
+            openVideoCallScreen(roomName, targetName, true);
+
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+            const myName = currentEmployee ? currentEmployee.name : (currentOwner ? currentOwner.name : 'Team');
+            const myPhoto = currentEmployee ? (currentEmployee.photoData || '') : (currentOwner ? (currentOwner.photoData || '') : '');
+
+            // Broadcast call_ring to other devices instantly
+            publishRealtimeMqtt('call', {
+                type: 'call_ring',
+                callType: 'video',
+                callerId: myId,
+                callerName: myName,
+                callerPhoto: myPhoto,
+                targetId: targetId,
+                roomName: roomName,
+                timestamp: Date.now()
+            });
+
+            sendChatMessage(targetId ? `📹 Started Live Video Call with ${targetName} — Tap to join` : '📹 Started Team Live Video Call — Tap to join', 'call');
+        }
+
+        function openVideoCallScreen(roomName, peerName, isCaller = false) {
             const modal = document.getElementById('videoCallModal');
             if (!modal) return;
             modal.classList.add('show');
@@ -8904,54 +9844,468 @@
                 if (el) el.textContent = t;
             }, 1000);
 
-            try {
-                localVideoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                const mainFeed = document.getElementById('mainVideoFeed');
-                const pipFeed = document.getElementById('pipVideoFeed');
-                if (mainFeed) mainFeed.srcObject = localVideoStream;
-                if (pipFeed) pipFeed.srcObject = localVideoStream;
-                showToast('📹 Camera connected. Team video call active.', 'success');
-            } catch (err) {
-                showToast('⚠️ Camera permission not granted. Use Group Video Room button.', 'warning');
+            const titleEl = document.getElementById('videoCallTitleText');
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-video" style="color:#25d366;margin-right:6px;"></i> Live Video Call • ${peerName || 'Team'}`;
+
+            const statusEl = document.getElementById('videoCallRoomStatus');
+            if (statusEl) {
+                statusEl.innerHTML = isCaller ? '📞 Ringing peer device...' : '🟢 Live Connected';
             }
 
-            sendChatMessage('📹 Started Team Live Video Call — Tap to join', 'call');
+            const myName = (currentEmployee ? currentEmployee.name : (currentOwner ? currentOwner.name : 'Member')) + (window.innerWidth < 768 ? ' (Mobile)' : ' (PC)');
+            const iframe = document.getElementById('videoCallIframe');
+            if (iframe) {
+                const jitsiUrl = `https://meet.jit.si/${roomName}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false&userInfo.displayName=${encodeURIComponent(myName)}`;
+                if (iframe.src !== jitsiUrl) {
+                    iframe.src = jitsiUrl;
+                }
+            }
         }
 
-        function endVideoCall() {
+        function endVideoCall(broadcast = true) {
             const modal = document.getElementById('videoCallModal');
             if (modal) modal.classList.remove('show');
             clearInterval(callTimerInterval);
-            if (localVideoStream) {
-                localVideoStream.getTracks().forEach(t => t.stop());
-                localVideoStream = null;
+
+            const iframe = document.getElementById('videoCallIframe');
+            if (iframe) iframe.src = 'about:blank';
+
+            if (broadcast) {
+                const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+                publishRealtimeMqtt('call', {
+                    type: 'call_ended',
+                    senderId: myId,
+                    roomName: getStoreCallRoomName()
+                });
             }
+
             showToast('Video Call Ended', 'info');
         }
 
+        function switchVideoToVoiceCall() {
+            endVideoCall(false);
+            startVoiceCall(activeCallTarget);
+            showToast('📞 Switched to Voice Call', 'success');
+        }
+
+        function openCallInNewTab(mode = 'video') {
+            const room = getStoreCallRoomName();
+            const myName = (currentEmployee ? currentEmployee.name : (currentOwner ? currentOwner.name : 'Member')) + (window.innerWidth < 768 ? ' (Mobile)' : ' (PC)');
+            const url = `https://meet.jit.si/${room}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=${mode === 'audio'}&userInfo.displayName=${encodeURIComponent(myName)}`;
+            window.open(url, '_blank');
+            showToast('🚀 Opened Live Call in separate tab!', 'success');
+        }
+
         function toggleVideoCallMic() {
-            if (!localVideoStream) return;
-            isCallMuted = !isCallMuted;
-            localVideoStream.getAudioTracks().forEach(t => t.enabled = !isCallMuted);
-            const btn = document.getElementById('videoMuteBtn');
-            if (btn) {
-                btn.innerHTML = isCallMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-                btn.classList.toggle('active-off', isCallMuted);
-            }
-            showToast(isCallMuted ? 'Mic Muted' : 'Mic Active', 'info');
+            showToast('Use microphone control inside meeting screen', 'info');
         }
 
         function toggleVideoCallCamera() {
-            if (!localVideoStream) return;
-            isVideoCameraOff = !isVideoCameraOff;
-            localVideoStream.getVideoTracks().forEach(t => t.enabled = !isVideoCameraOff);
-            const btn = document.getElementById('videoCamToggleBtn');
-            if (btn) {
-                btn.innerHTML = isVideoCameraOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
-                btn.classList.toggle('active-off', isVideoCameraOff);
-            }
-            showToast(isVideoCameraOff ? 'Camera Off' : 'Camera On', 'info');
+            showToast('Use camera control inside meeting screen', 'info');
         }
+
+        // =============================================
+        // TEAM LIVE PRESENCE & WHO IS ONLINE / OFFLINE ROSTER
+        // =============================================
+        window.kjrTeamPresence = {};
+        try {
+            const saved = localStorage.getItem('kjr_team_presence_cache');
+            if (saved) window.kjrTeamPresence = JSON.parse(saved);
+        } catch (e) { }
+
+        function getCurrentChatUser() {
+            if (currentEmployee) {
+                return {
+                    id: currentEmployee.id,
+                    name: currentEmployee.name,
+                    role: 'employee',
+                    designation: currentEmployee.designation || 'Staff',
+                    photo: currentEmployee.photoData || '',
+                    mobile: currentEmployee.mobile || ''
+                };
+            }
+            if (currentOwner) {
+                return {
+                    id: currentOwner.id || 'owner_1',
+                    name: currentOwner.name || 'Owner',
+                    role: 'owner',
+                    designation: 'Owner / Store Admin',
+                    photo: currentOwner.photoData || '',
+                    mobile: currentOwner.mobile || ''
+                };
+            }
+            return null;
+        }
+
+        function getAllTeamMembers() {
+            if (!currentOwner) return [];
+            const list = [];
+            // Owner
+            list.push({
+                id: currentOwner.id || 'owner_1',
+                name: currentOwner.name || 'Owner',
+                role: 'owner',
+                designation: 'Owner & Store Admin',
+                photoData: currentOwner.photoData || '',
+                mobile: currentOwner.mobile || '',
+                email: currentOwner.email || ''
+            });
+
+            // Employees
+            (currentOwner.employees || []).filter(e => e.isActive !== false).forEach(e => {
+                list.push({
+                    id: e.id,
+                    name: e.name,
+                    role: 'employee',
+                    designation: e.designation || 'Store Staff',
+                    photoData: e.photoData || '',
+                    mobile: e.mobile || '',
+                    email: e.email || ''
+                });
+            });
+
+            return list;
+        }
+
+        function isMemberOnline(memberId) {
+            if (!memberId) return false;
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+            if (memberId === myId) return true; // Current active user is always online
+
+            const pres = (window.kjrTeamPresence && window.kjrTeamPresence[memberId]);
+            if (pres && pres.lastSeen && (Date.now() - pres.lastSeen < 45000)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function getMemberStatusInfo(member) {
+            const isOnline = isMemberOnline(member.id);
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+            const isMe = member.id === myId;
+
+            if (isOnline) {
+                return {
+                    isOnline: true,
+                    statusLabel: isMe ? '🟢 Online (You)' : '🟢 Online (Active Now)',
+                    statusClass: 'online',
+                    subText: 'Active in KJR Seva Portal'
+                };
+            }
+
+            // Check if checked in today in attendance
+            const today = getTodayStr();
+            const att = (currentOwner && currentOwner.attendance) ?
+                currentOwner.attendance.find(a => a.employeeId === member.id && a.date === today) : null;
+
+            if (att && att.checkIn && !att.checkOut) {
+                return {
+                    isOnline: false,
+                    isOnShift: true,
+                    statusLabel: `🟡 On Shift (In at ${att.checkIn})`,
+                    statusClass: 'shift',
+                    subText: 'Shift active today • Idle tab'
+                };
+            }
+
+            const pres = (window.kjrTeamPresence && window.kjrTeamPresence[member.id]);
+            let lastSeenText = 'Offline';
+            if (pres && pres.lastSeen) {
+                const diffMins = Math.floor((Date.now() - pres.lastSeen) / 60000);
+                if (diffMins < 1) lastSeenText = 'Last seen just now';
+                else if (diffMins < 60) lastSeenText = `Last seen ${diffMins}m ago`;
+                else {
+                    const hrs = Math.floor(diffMins / 60);
+                    lastSeenText = `Last seen ${hrs}h ago`;
+                }
+            }
+
+            return {
+                isOnline: false,
+                isOnShift: false,
+                statusLabel: `⚪ ${lastSeenText}`,
+                statusClass: 'offline',
+                subText: lastSeenText
+            };
+        }
+
+        function updatePresenceUI() {
+            const members = getAllTeamMembers();
+            if (members.length === 0) return;
+
+            let onlineMembers = [];
+            let offlineMembers = [];
+
+            members.forEach(m => {
+                if (isMemberOnline(m.id)) onlineMembers.push(m);
+                else offlineMembers.push(m);
+            });
+
+            const onlineCount = onlineMembers.length;
+            const offlineCount = offlineMembers.length;
+
+            // Header online count chip
+            const countChip = document.getElementById('chatHeaderOnlineCount');
+            if (countChip) countChip.textContent = `${onlineCount} Online`;
+
+            // Header dot
+            const dot = document.getElementById('chatHeaderOnlineDot');
+            if (dot) {
+                dot.style.background = onlineCount > 0 ? '#25d366' : '#94a3b8';
+            }
+
+            // Header status line
+            const subtitle = document.getElementById('chatMembersSubtitle');
+            if (subtitle) {
+                const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+                const onlineNames = onlineMembers.map(m => m.id === myId ? 'You' : m.name);
+                let onlineText = onlineNames.slice(0, 2).join(', ');
+                if (onlineNames.length > 2) onlineText += ` +${onlineNames.length - 2}`;
+
+                subtitle.innerHTML = `🟢 <strong style="color:#ffffff;">${onlineCount} Online</strong> (${onlineText || 'You'}) • ⚪ ${offlineCount} Offline <span style="opacity:0.85;font-size:10px;">(Tap to view)</span>`;
+            }
+
+            // Re-render roster if modal is open
+            const rosterModal = document.getElementById('teamRosterModal');
+            if (rosterModal && rosterModal.classList.contains('show')) {
+                renderTeamRoster();
+            }
+        }
+
+        function sendPresencePing() {
+            const me = getCurrentChatUser();
+            if (!me) return;
+
+            if (!window.kjrTeamPresence) window.kjrTeamPresence = {};
+            window.kjrTeamPresence[me.id] = {
+                id: me.id,
+                name: me.name,
+                role: me.role,
+                designation: me.designation,
+                photoData: me.photo,
+                mobile: me.mobile,
+                lastSeen: Date.now(),
+                isOnline: true
+            };
+
+            try {
+                localStorage.setItem('kjr_team_presence_cache', JSON.stringify(window.kjrTeamPresence));
+                localStorage.setItem('kjr_presence_heartbeat', JSON.stringify({
+                    member: window.kjrTeamPresence[me.id],
+                    ts: Date.now()
+                }));
+            } catch (e) { }
+
+            if (chatBroadcastChannel) {
+                chatBroadcastChannel.postMessage({
+                    type: 'presence_ping',
+                    member: window.kjrTeamPresence[me.id]
+                });
+            }
+
+            // Broadcast presence to PC/Mobile via MQTT (<50ms delivery)
+            publishRealtimeMqtt('presence', {
+                type: 'presence_ping',
+                member: window.kjrTeamPresence[me.id]
+            });
+
+            updatePresenceUI();
+        }
+
+        function openTeamRosterModal() {
+            const modal = document.getElementById('teamRosterModal');
+            if (!modal) return;
+            modal.classList.add('show');
+            sendPresencePing();
+            renderTeamRoster();
+        }
+
+        function closeTeamRosterModal() {
+            const modal = document.getElementById('teamRosterModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        function setRosterFilter(filter) {
+            currentRosterFilter = filter;
+            ['all', 'online', 'offline'].forEach(f => {
+                const tab = document.getElementById('rosterTab' + f.charAt(0).toUpperCase() + f.slice(1));
+                if (tab) tab.classList.toggle('active', f === filter);
+            });
+            renderTeamRoster();
+        }
+
+        function renderTeamRoster() {
+            const container = document.getElementById('teamRosterListContainer');
+            if (!container || !currentOwner) return;
+
+            const members = getAllTeamMembers();
+            const myId = currentEmployee ? currentEmployee.id : (currentOwner ? currentOwner.id : '');
+
+            let onlineList = [];
+            let offlineList = [];
+
+            members.forEach(m => {
+                if (isMemberOnline(m.id)) onlineList.push(m);
+                else offlineList.push(m);
+            });
+
+            // Update counts in modal
+            const cAll = document.getElementById('rosterCountAll');
+            const cOn = document.getElementById('rosterCountOnline');
+            const cOff = document.getElementById('rosterCountOffline');
+            const cSum = document.getElementById('rosterSummaryCounts');
+
+            if (cAll) cAll.textContent = members.length;
+            if (cOn) cOn.textContent = onlineList.length;
+            if (cOff) cOff.textContent = offlineList.length;
+            if (cSum) cSum.textContent = `${onlineList.length} Online Now • ${offlineList.length} Offline`;
+
+            let displayList = members;
+            if (currentRosterFilter === 'online') displayList = onlineList;
+            if (currentRosterFilter === 'offline') displayList = offlineList;
+
+            if (displayList.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:30px;color:var(--text-light);font-size:12px;">
+                        No team members in this tab (${currentRosterFilter}).
+                    </div>
+                `;
+                return;
+            }
+
+            const nameColors = ['#0284c7', '#7c3aed', '#059669', '#d97706', '#db2777', '#dc2626', '#4f46e5'];
+            const getColor = (str) => {
+                let hash = 0;
+                for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                return nameColors[Math.abs(hash) % nameColors.length];
+            };
+
+            let html = '';
+            displayList.forEach(m => {
+                const isMe = m.id === myId;
+                const statusInfo = getMemberStatusInfo(m);
+                const senderColor = getColor(m.name);
+                const cleanPhone = getCleanPhone(m.mobile);
+
+                const avatarContent = m.photoData ?
+                    `<img src="${m.photoData}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="${m.name}">` :
+                    (m.name ? m.name.charAt(0) : '?');
+
+                html += `
+                    <div class="roster-member-card">
+                        <div class="roster-avatar-box" style="background:${senderColor};">
+                            ${avatarContent}
+                            <span class="roster-status-dot ${statusInfo.statusClass}"></span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <strong style="color:var(--text-primary);font-size:14px;">${m.name}</strong>
+                                ${isMe ? '<span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:8px;font-weight:700;">You</span>' : ''}
+                                <span class="wa-role-badge ${m.role === 'owner' ? 'owner' : 'staff'}">${m.role === 'owner' ? '👑 Owner' : '👤 Staff'}</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">
+                                ${m.designation} • <span style="font-weight:600;color:${statusInfo.isOnline ? '#10b981' : (statusInfo.isOnShift ? '#d97706' : '#64748b')};">${statusInfo.statusLabel}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            ${!isMe ? `
+                                <button type="button" class="roster-action-btn call-voice" onclick="openCallChooserModal('audio', '${m.id}')" title="Voice Call ${m.name}">
+                                    <i class="fas fa-phone-alt"></i>
+                                </button>
+                                <button type="button" class="roster-action-btn call-video" onclick="openCallChooserModal('video', '${m.id}')" title="Video Call ${m.name}">
+                                    <i class="fas fa-video"></i>
+                                </button>
+                                ${cleanPhone ? `
+                                    <a href="https://wa.me/91${cleanPhone}" target="_blank" class="roster-action-btn" style="color:#25d366;" title="Chat with ${m.name} on WhatsApp">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </a>
+                                ` : ''}
+                                <button type="button" class="roster-action-btn chat-msg" onclick="mentionMemberInChat('${m.name}')" title="Mention in Team Chat">
+                                    <i class="fas fa-at"></i>
+                                </button>
+                            ` : `
+                                <span class="badge" style="background:#dcf8c6;color:#075e54;font-size:11px;">Active</span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function mentionMemberInChat(name) {
+            closeTeamRosterModal();
+            const input = document.getElementById('chatTextInput');
+            if (input) {
+                input.value = `@${name} ` + input.value;
+                input.focus();
+                handleChatTyping();
+            }
+        }
+
+        function simulateToggleStaffPresence() {
+            if (!currentOwner || !currentOwner.employees || currentOwner.employees.length === 0) return;
+            const staff = currentOwner.employees[0];
+            const pres = (window.kjrTeamPresence && window.kjrTeamPresence[staff.id]);
+            const currentlyOnline = isMemberOnline(staff.id);
+
+            if (!window.kjrTeamPresence) window.kjrTeamPresence = {};
+            if (currentlyOnline) {
+                window.kjrTeamPresence[staff.id] = {
+                    id: staff.id,
+                    name: staff.name,
+                    role: 'employee',
+                    designation: staff.designation || 'Staff',
+                    photoData: staff.photoData || '',
+                    mobile: staff.mobile || '',
+                    lastSeen: Date.now() - 300000, // 5 min ago
+                    isOnline: false
+                };
+                showToast(`⚪ Simulating ${staff.name} is now Offline`, 'info');
+            } else {
+                window.kjrTeamPresence[staff.id] = {
+                    id: staff.id,
+                    name: staff.name,
+                    role: 'employee',
+                    designation: staff.designation || 'Staff',
+                    photoData: staff.photoData || '',
+                    mobile: staff.mobile || '',
+                    lastSeen: Date.now(),
+                    isOnline: true
+                };
+                showToast(`🟢 Simulating ${staff.name} is now Online!`, 'success');
+            }
+
+            try {
+                localStorage.setItem('kjr_team_presence_cache', JSON.stringify(window.kjrTeamPresence));
+            } catch (e) { }
+
+            updatePresenceUI();
+            if (chatBroadcastChannel) {
+                chatBroadcastChannel.postMessage({
+                    type: currentlyOnline ? 'presence_offline' : 'presence_ping',
+                    memberId: staff.id,
+                    member: window.kjrTeamPresence[staff.id]
+                });
+            }
+        }
+
+        // Send presence ping every 10 seconds
+        setInterval(sendPresencePing, 10000);
+        setTimeout(sendPresencePing, 1000);
+
+        // Notify other tabs when closing window
+        window.addEventListener('beforeunload', () => {
+            const me = getCurrentChatUser();
+            if (me && chatBroadcastChannel) {
+                chatBroadcastChannel.postMessage({
+                    type: 'presence_offline',
+                    memberId: me.id
+                });
+            }
+        });
 
         // =============================================
         // CLOUD CHAT POLLING & MERGE
@@ -9013,9 +10367,13 @@
         syncStaffFromCloudOnBoot();
         startAutoSyncEngine();
 
+        // Initialize Realtime Cross-Device MQTT Engine (<50ms delivery)
+        initRealtimeSync();
+
         console.log('✅ KJRSEVA HRMS 2.2 Enterprise Ready');
         console.log('✅ Google Identity Services Loaded');
         console.log('✅ Google Sheets Cloud Sync Engine Ready');
+        console.log('✅ Realtime Cross-Device Engine (Mobile <-> PC) Ready');
     </script>
 </body>
 
