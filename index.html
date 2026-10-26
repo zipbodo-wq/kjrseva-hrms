@@ -3968,6 +3968,18 @@
                                 class="fas fa-check"></i> Submit For Approval</button>
                     </div>
                 </div>
+
+                <!-- Live Submissions Section (Directly visible in main staff app without scrolling) -->
+                <div id="empRecentSubmissionsSection" style="margin-top:18px;border-top:2px dashed var(--border-color);padding-top:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <strong style="font-size:13px;color:var(--text-primary);"><i class="fas fa-history" style="color:var(--secondary);"></i> My Live Submissions (<span id="empRecentSubCount">0</span>)</strong>
+                            <span class="badge badge-info" style="font-size:10px;padding:2px 8px;">🟢 Live Synced</span>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-xs" onclick="scrollToSection('empWorkHistorySection'); setEmpFilter('all');"><i class="fas fa-list"></i> Full History</button>
+                    </div>
+                    <div id="empRecentSubmissionsList"></div>
+                </div>
             </div>
 
             <!-- Staff Performance & Wallet Cards -->
@@ -5209,6 +5221,50 @@
         }
         function getCurrentTime() { return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); }
 
+        function getNormalizedDateStr(raw) {
+            if (!raw) return '';
+            if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) {
+                return raw.trim();
+            }
+            try {
+                const d = new Date(raw);
+                if (!isNaN(d.getTime())) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                }
+            } catch (e) {}
+            return String(raw).slice(0, 10);
+        }
+
+        function isRecordForStaff(record, emp) {
+            if (!record || !emp) return false;
+            const empId = emp.id;
+            const empName = emp.name ? String(emp.name).trim().toLowerCase() : '';
+            const empEmail = emp.email ? String(emp.email).trim().toLowerCase() : '';
+            const empPhone = getCleanPhone(emp.mobile);
+
+            // 1. Direct ID match (loose string comparison)
+            if (empId !== undefined && empId !== null && record.employeeId !== undefined && record.employeeId !== null) {
+                if (String(record.employeeId).trim() === String(empId).trim()) return true;
+            }
+            // 2. Name match (case-insensitive)
+            if (empName && record.employeeName) {
+                if (String(record.employeeName).trim().toLowerCase() === empName) return true;
+            }
+            // 3. Email match
+            if (empEmail && (record.employeeEmail || record.email)) {
+                if (String(record.employeeEmail || record.email).trim().toLowerCase() === empEmail) return true;
+            }
+            // 4. Phone match
+            if (empPhone && (record.employeeMobile || record.employeePhone || record.mobile || record.phone)) {
+                const rPhone = getCleanPhone(record.employeeMobile || record.employeePhone || record.mobile || record.phone);
+                if (rPhone && rPhone === empPhone) return true;
+            }
+            return false;
+        }
+
         // =============================================
         // TOAST & NOTIFICATIONS
         // =============================================
@@ -5464,10 +5520,14 @@
                 const localEntries = currentOwner.workEntries || [];
                 const entryMap = new Map();
                 cloudData.workEntries.forEach(e => {
-                    if (e && e.id) entryMap.set(String(e.id), e);
+                    if (e && e.id) {
+                        if (e.date) e.date = getNormalizedDateStr(e.date);
+                        entryMap.set(String(e.id), e);
+                    }
                 });
                 localEntries.forEach(e => {
                     if (e && e.id) {
+                        if (e.date) e.date = getNormalizedDateStr(e.date);
                         if (!entryMap.has(String(e.id))) {
                             entryMap.set(String(e.id), e);
                         }
@@ -6705,17 +6765,16 @@
         // =============================================
         function openWalletPassbook() {
             if (!currentEmployee) return;
-            const empId = currentEmployee.id;
 
             // Approved Work = Credits
-            const credits = currentOwner.workEntries
-                .filter(w => w.employeeId === empId && w.approvalStatus === 'approved')
-                .map(w => ({ date: w.date, desc: `Work: ${w.workName}`, type: 'credit', amt: w.employeePayment || 0 }));
+            const credits = (currentOwner.workEntries || [])
+                .filter(w => isRecordForStaff(w, currentEmployee) && w.approvalStatus === 'approved')
+                .map(w => ({ date: getNormalizedDateStr(w.date), desc: `Work: ${w.workName}`, type: 'credit', amt: w.employeePayment || 0 }));
 
             // Payouts = Debits
-            const debits = currentOwner.paymentRecords
-                .filter(p => p.employeeId === empId)
-                .map(p => ({ date: p.date, desc: `Payout: ${p.type} (${p.mode})`, type: 'debit', amt: p.amount || 0 }));
+            const debits = (currentOwner.paymentRecords || [])
+                .filter(p => isRecordForStaff(p, currentEmployee))
+                .map(p => ({ date: getNormalizedDateStr(p.date), desc: `Payout: ${p.type} (${p.mode})`, type: 'debit', amt: p.amount || 0 }));
 
             const totalEarned = credits.reduce((s, c) => s + c.amt, 0);
             const totalPaid = debits.reduce((s, d) => s + d.amt, 0);
@@ -7248,11 +7307,29 @@
                 renderOwnerStats();
                 renderProfitAnalysis();
                 renderFinancialSummary();
+                updateBadges();
                 showToast('✅ Work Approved & Staff Wallet Credited!', 'success');
-                if (cloudApiUrl) triggerManualSync();
 
-                const emp = currentOwner.employees.find(e => e.id === entry.employeeId);
-                addNotification('✅ Work Approved', `${entry.serviceName} approved for ${emp ? emp.name : 'Staff'} (₹${(entry.customerPrice || 0).toFixed(2)})`, 'success');
+                // Send approveWork to Google Apps Script cloud backend
+                if (cloudApiUrl) {
+                    try {
+                        fetch(cloudApiUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'approveWork', id: id })
+                        }).catch(() => {});
+                    } catch (e) {}
+                    setTimeout(() => triggerManualSync(), 1500);
+                }
+
+                // Broadcast in real-time to Staff's phone via MQTT
+                if (typeof publishRealtimeMqtt === 'function') {
+                    publishRealtimeMqtt('work', { type: 'workApproved', id: id, entry: entry });
+                }
+
+                const emp = currentOwner.employees.find(e => isRecordForStaff(entry, e));
+                addNotification('✅ Work Approved', `${entry.workName || 'Work'} approved for ${emp ? emp.name : 'Staff'} (₹${(entry.customerPrice || 0).toFixed(2)})`, 'success');
 
                 const cleanPhone = emp ? getCleanPhone(emp.mobile) : '';
                 if (cleanPhone.length === 10) {
@@ -7633,14 +7710,15 @@
         // =============================================
         // EMPLOYEE VIEW LOGIC
         // =============================================
-        let empFilter = 'today';
+        let empFilter = 'all'; // Default to 'all' so staff always sees all their work entries immediately!
         let empDateRange = null;
 
         function setEmpFilter(filter) {
             empFilter = filter;
             empDateRange = null;
             document.querySelectorAll('#employeeDashboard .filter-btn[data-empfilter]').forEach(b => b.classList.remove('active'));
-            document.querySelector(`#employeeDashboard .filter-btn[data-empfilter="${filter}"]`)?.classList.add('active');
+            const btn = document.querySelector(`#employeeDashboard .filter-btn[data-empfilter="${filter}"]`);
+            if (btn) btn.classList.add('active');
             renderEmployeeView();
         }
 
@@ -7754,9 +7832,11 @@
 
                 const customerPayment = parseFloat(document.getElementById('empCustPayment').value) || 0;
                 const newEntry = {
-                    id: Date.now() + Math.random(),
-                    employeeId: currentEmployee.id,
-                    employeeName: currentEmployee.name,
+                    id: 'work_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                    employeeId: String(currentEmployee.id || ''),
+                    employeeName: String(currentEmployee.name || 'Staff'),
+                    employeeEmail: String(currentEmployee.email || ''),
+                    employeeMobile: String(currentEmployee.mobile || ''),
                     workName: sel.value,
                     employeePayment: parseFloat(sel.getAttribute('data-employee')) || 0,
                     customerPrice: parseFloat(sel.getAttribute('data-customer')) || 0,
@@ -7771,7 +7851,8 @@
                     approvalStatus: 'pending' // Requires owner approval
                 };
 
-                currentOwner.workEntries.push(newEntry);
+                if (!currentOwner.workEntries) currentOwner.workEntries = [];
+                currentOwner.workEntries.unshift(newEntry);
                 saveOwners();
                 renderEmployeeView();
                 showToast('✅ Work submitted! Awaiting owner approval.', 'success');
@@ -7795,7 +7876,10 @@
                             body: JSON.stringify({ action: 'addWorkEntry', entry: newEntry })
                         }).catch(() => {});
                     } catch (e) {}
-                    triggerManualSync();
+                    // Delay getAll sync by 2 seconds so Google Apps Script completes appending the row
+                    setTimeout(() => {
+                        if (cloudApiUrl) triggerManualSync();
+                    }, 2000);
                 }
 
                 // Broadcast in real-time to Owner's PC via MQTT
@@ -7810,38 +7894,107 @@
             if (!currentOwner) currentOwner = owners[0] || {};
             if (!currentOwner.workEntries) currentOwner.workEntries = [];
             if (!currentOwner.paymentRecords) currentOwner.paymentRecords = [];
-            const empId = currentEmployee.id;
-            const myWork = (currentOwner.workEntries || []).filter(w => w && w.employeeId === empId);
+
+            // Universal flexible staff matching (ID, name, email, mobile)
+            const myWork = (currentOwner.workEntries || []).filter(w => isRecordForStaff(w, currentEmployee));
             const myApprovedWork = myWork.filter(w => w && w.approvalStatus === 'approved');
             const totalEarned = myApprovedWork.reduce((s, w) => s + (w.employeePayment || 0), 0);
-            const totalPaid = (currentOwner.paymentRecords || []).filter(p => p && p.employeeId === empId).reduce((s, p) => s + (p.amount || 0), 0);
+            const totalPaid = (currentOwner.paymentRecords || []).filter(p => isRecordForStaff(p, currentEmployee)).reduce((s, p) => s + (p.amount || 0), 0);
             const pendingWallet = Math.max(0, totalEarned - totalPaid);
 
-            // Filter submissions by Today, Month, Year, Custom Range, Pending, Approved
+            // 1. Render Live Recent Submissions Box directly inside #empAddWork card
+            const recentSubList = document.getElementById('empRecentSubmissionsList');
+            const recentSubCount = document.getElementById('empRecentSubCount');
+            if (recentSubList) {
+                const sortedAll = myWork.slice().sort((a, b) => {
+                    const dateA = getNormalizedDateStr(a.date) + ' ' + (a.time || '00:00');
+                    const dateB = getNormalizedDateStr(b.date) + ' ' + (b.time || '00:00');
+                    if (dateA !== dateB) return dateB.localeCompare(dateA);
+                    return String(b.id || '').localeCompare(String(a.id || ''));
+                });
+                const recentItems = sortedAll.slice(0, 5);
+
+                if (recentSubCount) recentSubCount.textContent = myWork.length;
+
+                if (recentItems.length === 0) {
+                    recentSubList.innerHTML = `
+                        <div style="background:var(--bg-main);border-radius:var(--radius-sm);padding:14px;text-align:center;color:var(--text-secondary);font-size:12px;">
+                            <i class="fas fa-clipboard-check" style="font-size:20px;color:var(--text-light);margin-bottom:6px;display:block;"></i>
+                            No work submissions logged yet. Pick a service above, enter details, and tap <strong>Submit For Approval</strong>.
+                        </div>
+                    `;
+                } else {
+                    recentSubList.innerHTML = recentItems.map(item => {
+                        const isApp = item.approvalStatus === 'approved';
+                        const statusBadge = isApp 
+                            ? `<span class="badge badge-success" style="font-size:11px;padding:3px 8px;"><i class="fas fa-check-circle"></i> Approved &amp; Credited</span>` 
+                            : `<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;font-size:11px;padding:3px 8px;"><i class="fas fa-clock fa-spin"></i> Pending Owner Approval</span>`;
+                        return `
+                            <div style="background:var(--bg-card);border:1px solid ${isApp ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.35)'};border-left:4px solid ${isApp ? '#16a34a' : '#f59e0b'};border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;">
+                                    <div>
+                                        <strong style="font-size:13px;color:var(--text-primary);display:block;">${item.workName}</strong>
+                                        <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">
+                                            ${item.customerName ? `👤 ${item.customerName}` : '👤 Walk-in Customer'}
+                                            ${item.customerPhone ? ` (📱 ${item.customerPhone})` : ''}
+                                            ${(item.printCopies > 0 || item.scanCopies > 0) ? ` | 🖨️ ${item.printCopies || 0}P / 📄 ${item.scanCopies || 0}S` : ''}
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        ${statusBadge}
+                                        <div style="font-size:12px;font-weight:700;color:var(--secondary);margin-top:3px;">My Share: ₹${(item.employeePayment || 0).toFixed(2)}</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px dashed var(--border-color);font-size:11px;color:var(--text-light);flex-wrap:wrap;gap:6px;">
+                                    <span>🕒 ${getNormalizedDateStr(item.date)} ${item.time || ''}</span>
+                                    <div style="display:flex;gap:6px;">
+                                        <button class="btn btn-secondary btn-xs" onclick="printReceipt('${item.id}')" title="Print Slip"><i class="fas fa-print"></i> Slip</button>
+                                        ${item.customerPhone ? `<button class="btn btn-success btn-xs" onclick="sendWhatsAppSlip('${item.id}')" title="WhatsApp Slip"><i class="fab fa-whatsapp"></i> WhatsApp</button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 2. Filter submissions for Full History Table by All, Today, Month, Year, Custom Range, Pending, Approved
             let filteredWork = myWork.slice();
             const now = new Date();
             const todayStr = getTodayStr();
 
             if (empDateRange) {
-                filteredWork = filteredWork.filter(e => e.date >= empDateRange.start && e.date <= empDateRange.end);
+                filteredWork = filteredWork.filter(e => {
+                    const ed = getNormalizedDateStr(e.date);
+                    return ed >= empDateRange.start && ed <= empDateRange.end;
+                });
             } else {
                 if (empFilter === 'today') {
-                    filteredWork = filteredWork.filter(e => e.date === todayStr);
+                    filteredWork = filteredWork.filter(e => getNormalizedDateStr(e.date) === todayStr);
                 } else if (empFilter === 'month') {
                     filteredWork = filteredWork.filter(e => {
-                        const d = new Date(e.date);
-                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                        const ed = getNormalizedDateStr(e.date);
+                        return ed.slice(0, 7) === todayStr.slice(0, 7);
                     });
                 } else if (empFilter === 'year') {
-                    filteredWork = filteredWork.filter(e => new Date(e.date).getFullYear() === now.getFullYear());
+                    filteredWork = filteredWork.filter(e => {
+                        const ed = getNormalizedDateStr(e.date);
+                        return ed.slice(0, 4) === todayStr.slice(0, 4);
+                    });
                 } else if (empFilter === 'pending') {
                     filteredWork = filteredWork.filter(e => e.approvalStatus === 'pending');
                 } else if (empFilter === 'approved') {
                     filteredWork = filteredWork.filter(e => e.approvalStatus === 'approved');
                 }
+                // 'all' shows all without extra filtering
             }
 
-            filteredWork.sort((a, b) => new Date(b.date) - new Date(a.date));
+            filteredWork.sort((a, b) => {
+                const dateA = getNormalizedDateStr(a.date) + ' ' + (a.time || '00:00');
+                const dateB = getNormalizedDateStr(b.date) + ' ' + (b.time || '00:00');
+                if (dateA !== dateB) return dateB.localeCompare(dateA);
+                return String(b.id || '').localeCompare(String(a.id || ''));
+            });
 
             const periodApproved = filteredWork.filter(w => w.approvalStatus === 'approved');
             const periodPending = filteredWork.filter(w => w.approvalStatus === 'pending');
@@ -7880,25 +8033,30 @@
                 </div>
             `;
 
+            let emptyRowMsg = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-light);"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:6px;"></i>No work submissions found for selected filter (${empFilter})</td></tr>`;
+            if (filteredWork.length === 0 && myWork.length > 0 && empFilter === 'today') {
+                emptyRowMsg = `<tr><td colspan="8" style="text-align:center;padding:22px;color:var(--text-secondary);"><i class="fas fa-calendar-day" style="font-size:22px;display:block;margin-bottom:6px;color:var(--secondary);"></i>No submissions logged for strictly today (${todayStr}).<div style="margin-top:6px;">You have <strong>${myWork.length}</strong> total submissions. <button class="btn btn-secondary btn-xs" onclick="setEmpFilter('all')"><i class="fas fa-list"></i> Show All (${myWork.length} Submissions)</button></div></td></tr>`;
+            }
+
             document.getElementById('empEntriesBody').innerHTML = filteredWork.map(e => `
                 <tr>
-                    <td>${e.date}</td>
+                    <td>${getNormalizedDateStr(e.date)} <small style="color:var(--text-light);display:block;">${e.time || ''}</small></td>
                     <td><strong>${e.workName}</strong></td>
-                    <td>₹${(e.employeePayment || 0).toFixed(2)}</td>
+                    <td><strong style="color:var(--secondary);">₹${(e.employeePayment || 0).toFixed(2)}</strong></td>
                     <td>₹${(e.customerPrice || 0).toFixed(2)}</td>
                     <td>${e.customerName || '—'}</td>
                     <td>${e.customerPhone || '—'}</td>
-                    <td><span class="approval-badge ${e.approvalStatus}">${e.approvalStatus}</span></td>
+                    <td><span class="approval-badge ${e.approvalStatus}">${e.approvalStatus === 'approved' ? '✅ approved' : '⏳ pending'}</span></td>
                     <td>
                         <button class="btn btn-secondary btn-xs" onclick="printReceipt('${e.id}')" title="Print Slip"><i class="fas fa-print"></i></button>
                         ${e.customerPhone ? `<button class="btn btn-success btn-xs" onclick="sendWhatsAppSlip('${e.id}')" title="WhatsApp Slip"><i class="fab fa-whatsapp"></i></button>` : ''}
                     </td>
                 </tr>
-            `).join('') || `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-light);"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:6px;"></i>No work submissions found for selected filter (${empFilter})</td></tr>`;
+            `).join('') || emptyRowMsg;
 
-            document.getElementById('empPayHistoryBody').innerHTML = currentOwner.paymentRecords.filter(p => p.employeeId === empId).slice().reverse().map(p => `
+            document.getElementById('empPayHistoryBody').innerHTML = (currentOwner.paymentRecords || []).filter(p => isRecordForStaff(p, currentEmployee)).slice().reverse().map(p => `
                 <tr>
-                    <td>${p.date}</td>
+                    <td>${getNormalizedDateStr(p.date)}</td>
                     <td><strong>₹${(p.amount || 0).toFixed(2)}</strong></td>
                     <td>${p.type}</td>
                     <td>${p.mode}</td>
@@ -7915,13 +8073,14 @@
                 for (let i = 6; i >= 0; i--) {
                     const d = new Date();
                     d.setDate(d.getDate() - i);
-                    const ds = d.toISOString().split('T')[0];
+                    const ds = getNormalizedDateStr(d);
                     last7Days.push(ds);
                     dailyEarnMap[ds] = 0;
                 }
                 myApprovedWork.forEach(w => {
-                    if (dailyEarnMap[w.date] !== undefined) {
-                        dailyEarnMap[w.date] += (w.employeePayment || 0);
+                    const wDate = getNormalizedDateStr(w.date);
+                    if (dailyEarnMap[wDate] !== undefined) {
+                        dailyEarnMap[wDate] += (w.employeePayment || 0);
                     }
                 });
                 const chartData = last7Days.map(d => dailyEarnMap[d]);
@@ -8873,7 +9032,7 @@
             if (!tbody) return;
 
             const myReqs = (currentOwner.paymentRequests || [])
-                .filter(r => r && r.employeeId === currentEmployee.id)
+                .filter(r => isRecordForStaff(r, currentEmployee))
                 .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0) || String(b.id || '').localeCompare(String(a.id || '')));
 
             if (myReqs.length === 0) {
@@ -9598,6 +9757,16 @@
                             saveOwners();
                             refreshAllViews();
                             addNotification('➕ Work Submitted', `${data.staffName || 'Staff'} submitted: ${data.entry.workName}`, 'work');
+                        }
+                    } else if (data.type === 'workApproved' && data.id) {
+                        if (!currentOwner.workEntries) currentOwner.workEntries = [];
+                        const entry = currentOwner.workEntries.find(e => String(e.id) === String(data.id));
+                        if (entry) {
+                            entry.approvalStatus = 'approved';
+                            saveOwners();
+                            refreshAllViews();
+                            showToast('🎉 Your work was approved by the Owner! Wallet credited.', 'success');
+                            addNotification('✅ Work Approved', `Owner approved: ${entry.workName || 'Job'}`, 'success');
                         }
                     }
                 }
