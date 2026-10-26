@@ -3353,6 +3353,7 @@
                         Setup Cloud Sheet</button>
                 </div>
                 <div class="quick-actions-grid">
+                    <div class="quick-action-btn" onclick="scrollToSection('workSection'); setFilter('pending_approval');"><span class="icon">⏳</span> Approvals (<span id="quickPendingCount">0</span>)</div>
                     <div class="quick-action-btn" onclick="scrollToSection('addWork')"><span class="icon">➕</span> Add
                         Work</div>
                     <div class="quick-action-btn" onclick="scrollToSection('paymentsSection')"><span
@@ -3368,6 +3369,20 @@
                     <div class="quick-action-btn" onclick="navigateTo('reports')"><span class="icon">📈</span> Reports
                     </div>
                     <div class="quick-action-btn" onclick="exportData()"><span class="icon">📤</span> Export CSV</div>
+                </div>
+            </div>
+
+            <!-- Pending Work Approvals Alert Banner -->
+            <div class="card" id="pendingApprovalAlertCard" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(234,179,8,0.06));border:2px solid #f59e0b;margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:38px;height:38px;border-radius:50%;background:#f59e0b;color:white;display:flex;align-items:center;justify-content:center;font-size:18px;">⏳</div>
+                        <div>
+                            <strong style="font-size:14px;color:#92400e;">Staff Work Submissions Awaiting Approval (<span id="pendingApprovalBannerCount">0</span>)</strong>
+                            <p style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Staff members have submitted completed customer jobs. Review &amp; approve to credit their wallet balance.</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning btn-sm" onclick="scrollToSection('workSection'); setFilter('pending_approval');" style="font-weight:700;"><i class="fas fa-check-circle"></i> Review &amp; Approve Now</button>
                 </div>
             </div>
 
@@ -3879,6 +3894,7 @@
                 <div class="quick-actions-grid">
                     <div class="quick-action-btn" onclick="document.getElementById('empAddWork').scrollIntoView()"><span
                             class="icon">➕</span> Add Work</div>
+                    <div class="quick-action-btn" onclick="scrollToSection('empWorkHistorySection')"><span class="icon">📋</span> My Submissions</div>
                     <div class="quick-action-btn" onclick="openTeamChatModal()"><span class="icon">💬</span> Team Chat
                     </div>
                     <div class="quick-action-btn" onclick="openWalletPassbook()"><span class="icon">💳</span> Wallet
@@ -5184,7 +5200,13 @@
         }
 
         function verifyPassword(p, h) { return hashPassword(p) === h; }
-        function getTodayStr() { return new Date().toISOString().slice(0, 10); }
+        function getTodayStr() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
         function getCurrentTime() { return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); }
 
         // =============================================
@@ -5438,7 +5460,21 @@
             if (!currentOwner && owners && owners[0]) currentOwner = owners[0];
             if (!currentOwner) return;
 
-            if (cloudData.workEntries && Array.isArray(cloudData.workEntries)) currentOwner.workEntries = cloudData.workEntries;
+            if (cloudData.workEntries && Array.isArray(cloudData.workEntries)) {
+                const localEntries = currentOwner.workEntries || [];
+                const entryMap = new Map();
+                cloudData.workEntries.forEach(e => {
+                    if (e && e.id) entryMap.set(String(e.id), e);
+                });
+                localEntries.forEach(e => {
+                    if (e && e.id) {
+                        if (!entryMap.has(String(e.id))) {
+                            entryMap.set(String(e.id), e);
+                        }
+                    }
+                });
+                currentOwner.workEntries = Array.from(entryMap.values());
+            }
             if (cloudData.paymentRecords && Array.isArray(cloudData.paymentRecords)) currentOwner.paymentRecords = cloudData.paymentRecords;
             if (cloudData.paymentRequests && Array.isArray(cloudData.paymentRequests)) currentOwner.paymentRequests = cloudData.paymentRequests;
             if (cloudData.attendance && Array.isArray(cloudData.attendance)) currentOwner.attendance = cloudData.attendance;
@@ -5579,18 +5615,18 @@
                 showToast('⚠️ No Cloud URL configured', 'warning');
                 return;
             }
-            showToast('🔄 Re-checking store database...', 'info');
+            showToast('🔄 Verifying...', 'info');
             try {
                 const res = await fetch(cloudApiUrl + '?action=getAll');
                 const result = await res.json();
                 if (result.status === 'success' && result.data) {
                     mergeCloudData(result.data);
-                    showToast('✅ Roster updated! Tap "Sign in with Google" now.', 'success');
+                    showToast('✅ Verified! Tap "Sign in with Google" now.', 'success');
                     const msgEl = document.getElementById('loginMsg');
-                    if (msgEl) msgEl.innerHTML = '<span style="color:#16a34a;font-weight:600;">✅ Staff roster updated! Please tap "Sign in with Google" button above now.</span>';
+                    if (msgEl) msgEl.innerHTML = '<span style="color:#16a34a;font-weight:600;">✅ Verified! Please tap "Sign in with Google" button above now.</span>';
                 }
             } catch (e) {
-                showToast('❌ Could not sync with Google Sheet: ' + e.message, 'error');
+                showToast('❌ Verification error: ' + e.message, 'error');
             }
         }
 
@@ -5726,9 +5762,9 @@
                 // If not found in local memory, check Google Sheets Cloud Backend!
                 if (!staffMatch && cloudApiUrl) {
                     if (msgEl) {
-                        msgEl.innerHTML = `<div style="background:rgba(59,130,246,0.1);border:1.5px solid #3b82f6;border-radius:var(--radius-sm);padding:10px;margin-top:8px;text-align:left;display:flex;align-items:center;gap:8px;">
+                        msgEl.innerHTML = `<div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:var(--radius-sm);padding:9px 12px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
                             <i class="fas fa-spinner fa-spin" style="color:#3b82f6;"></i>
-                            <span style="font-size:12px;color:var(--text-primary);">Verifying ${googleEmail} with store Google Sheet database...</span>
+                            <span style="font-size:12px;color:var(--text-primary);font-weight:600;">Verifying...</span>
                         </div>`;
                     }
                     try {
@@ -5831,7 +5867,7 @@
                                 👉 <strong>If you are Owner:</strong> Register your business via "Register Business" below.
                             </p>
                             <button class="btn btn-secondary btn-xs" onclick="syncAndRetryGoogleLogin('${googleEmail}')" style="margin-top:8px;width:100%;justify-content:center;">
-                                <i class="fas fa-sync"></i> Re-check Store Cloud Database
+                                <i class="fas fa-sync"></i> Retry Verification
                             </button>
                         </div>`;
                     }
@@ -6002,7 +6038,7 @@
 
                 // If staff not cached locally on this device, check Google Sheet Cloud!
                 if (!foundEmp && cloudApiUrl) {
-                    msg.innerHTML = '<span style="color:#3b82f6;"><i class="fas fa-spinner fa-spin"></i> Checking store database...</span>';
+                    msg.innerHTML = '<span style="color:#3b82f6;"><i class="fas fa-spinner fa-spin"></i> Verifying...</span>';
                     try {
                         const res = await fetch(cloudApiUrl + '?action=getAll');
                         const result = await res.json();
@@ -7739,12 +7775,33 @@
                 saveOwners();
                 renderEmployeeView();
                 showToast('✅ Work submitted! Awaiting owner approval.', 'success');
+
+                // Trigger notifications & update badges
+                addNotification('➕ Work Submitted', `${currentEmployee.name} submitted: ${newEntry.workName}`, 'work');
+                updateBadges();
+
                 ['empCustName', 'empCustPhone', 'empCustPayment', 'empPrintCopies', 'empScanCopies'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = id.includes('Copies') || id.includes('Payment') ? '0' : '';
                 });
 
-                if (cloudApiUrl) triggerManualSync();
+                // Send to Google Sheets cloud backend
+                if (cloudApiUrl) {
+                    try {
+                        fetch(cloudApiUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'addWorkEntry', entry: newEntry })
+                        }).catch(() => {});
+                    } catch (e) {}
+                    triggerManualSync();
+                }
+
+                // Broadcast in real-time to Owner's PC via MQTT
+                if (typeof publishRealtimeMqtt === 'function') {
+                    publishRealtimeMqtt('work', { type: 'newWorkEntry', entry: newEntry, staffName: currentEmployee.name });
+                }
             };
         }
 
@@ -8224,6 +8281,14 @@
             if (penBadge) {
                 penBadge.textContent = pending;
                 penBadge.style.display = pending > 0 ? 'inline' : 'none';
+            }
+            const quickBadge = document.getElementById('quickPendingCount');
+            if (quickBadge) quickBadge.textContent = pending;
+            const bannerCard = document.getElementById('pendingApprovalAlertCard');
+            const bannerCount = document.getElementById('pendingApprovalBannerCount');
+            if (bannerCard && bannerCount) {
+                bannerCount.textContent = pending;
+                bannerCard.style.display = pending > 0 ? 'block' : 'none';
             }
         }
 
@@ -9524,6 +9589,17 @@
                 } else if (topic.endsWith('/presence')) {
                     if (data.member && data.member.id === myId) return;
                     handleIncomingChatBroadcast(data);
+                } else if (topic.endsWith('/work')) {
+                    if (data.type === 'newWorkEntry' && data.entry) {
+                        if (!currentOwner.workEntries) currentOwner.workEntries = [];
+                        const exists = currentOwner.workEntries.some(e => String(e.id) === String(data.entry.id));
+                        if (!exists) {
+                            currentOwner.workEntries.unshift(data.entry);
+                            saveOwners();
+                            refreshAllViews();
+                            addNotification('➕ Work Submitted', `${data.staffName || 'Staff'} submitted: ${data.entry.workName}`, 'work');
+                        }
+                    }
                 }
             } catch (e) {
                 console.warn('Error processing MQTT message:', e);
