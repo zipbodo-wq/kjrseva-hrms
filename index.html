@@ -3001,6 +3001,103 @@
             background: rgba(255, 255, 255, 0.12);
             border-radius: 10px;
         }
+    
+        /* ===== THERMAL RECEIPT & PRINT SYSTEM ===== */
+        .paper-slip-visual {
+            background: #ffffff;
+            color: #000000;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            border-top: 4px solid #334155;
+            position: relative;
+            line-height: 1.35;
+            transition: all 0.2s ease;
+        }
+
+        .paper-slip-visual::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: radial-gradient(circle, transparent, transparent 50%, #ffffff 50%, #ffffff 100%);
+            background-size: 10px 10px;
+        }
+
+        .paper-58mm {
+            width: 240px;
+            max-width: 240px;
+            font-size: 11px;
+        }
+
+        .paper-80mm {
+            width: 320px;
+            max-width: 320px;
+            font-size: 12.5px;
+        }
+
+        .paper-a4 {
+            width: 440px;
+            max-width: 440px;
+            font-size: 13.5px;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+
+            #receiptPrintArea,
+            #receiptPrintArea * {
+                visibility: visible !important;
+            }
+
+            #receiptPrintArea {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                margin: 0 auto !important;
+                color: #000000 !important;
+                background: #ffffff !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                padding: 4px !important;
+            }
+
+            #receiptPrintArea.print-58mm {
+                width: 58mm !important;
+                max-width: 58mm !important;
+            }
+
+            #receiptPrintArea.print-80mm {
+                width: 80mm !important;
+                max-width: 80mm !important;
+            }
+
+            #receiptPrintArea.print-a4 {
+                width: 100% !important;
+                max-width: 180mm !important;
+            }
+
+            @page {
+                size: auto;
+                margin: 2mm;
+            }
+        }
+
+        /* ===== MOBILE NOTIFICATION STATUS & CONTROLS ===== */
+        .notif-pulse-active {
+            animation: notifPulse 2s infinite;
+        }
+
+        @keyframes notifPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
     </style>
 </head>
 
@@ -3079,6 +3176,9 @@
             <button class="sidebar-nav-item" onclick="openWalletPassbook(); closeMobileNav();">
                 <i class="fas fa-book"></i><span>Passbook</span>
             </button>
+            <button class="sidebar-nav-item" onclick="openNotificationSettingsModal(); closeMobileNav();">
+                <i class="fas fa-bell"></i><span>Mobile Screen Alerts</span>
+            </button>
         </div>
         <div class="sidebar-footer">
             <button class="sidebar-nav-item" onclick="showLogoutPopup()">
@@ -3118,6 +3218,11 @@
 
                 <button class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light">
                     <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+
+                <button class="btn btn-sm" id="topMobileAlertBtn" onclick="openNotificationSettingsModal()" title="Mobile Screen Notifications" style="padding:6px 11px;border-radius:50px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;">
+                    <i class="fas fa-mobile-alt" style="color:#0284c7;"></i>
+                    <span id="topMobileAlertDot" class="notif-pulse-active" style="width:7px;height:7px;background:#eab308;border-radius:50%;display:inline-block;" title="Status"></span>
                 </button>
 
                 <div class="notification-bell" onclick="toggleNotifications(event)"
@@ -3747,6 +3852,16 @@
                             style="width:100%;justify-content:center;"><i class="fas fa-file-export"></i> Download CSV
                             Backup</button>
                     </div>
+                    <div>
+                        <h4 style="margin-bottom:6px;font-size:13px;">Thermal Receipt &amp; Print</h4>
+                        <button class="btn btn-purple" onclick="openReceiptSettingsModal()"
+                            style="width:100%;justify-content:center;background:linear-gradient(135deg,#7c3aed,#6d28d9);"><i class="fas fa-receipt"></i> Configure Receipt</button>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom:6px;font-size:13px;">Mobile Screen Alerts</h4>
+                        <button class="btn btn-info" onclick="openNotificationSettingsModal()"
+                            style="width:100%;justify-content:center;background:linear-gradient(135deg,#0284c7,#0369a1);"><i class="fas fa-bell"></i> Mobile Notifications</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3985,6 +4100,214 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- ===== THERMAL RECEIPT & PRINT SETTINGS MODAL ===== -->
+    <div id="receiptSettingsModal" class="modal">
+        <div class="modal-content" style="max-width:880px;width:95vw;max-height:92vh;overflow-y:auto;">
+            <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding-bottom:12px;margin-bottom:16px;">
+                <h2><i class="fas fa-receipt" style="color:var(--secondary);"></i> Thermal Receipt &amp; POS Print Settings</h2>
+                <span class="close-modal" onclick="closeReceiptSettingsModal()">&times;</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;align-items:start;">
+                <!-- Form Inputs -->
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div style="background:rgba(44,159,110,0.08);border:1px solid rgba(44,159,110,0.25);padding:10px 14px;border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);line-height:1.4;">
+                        <i class="fas fa-print" style="color:var(--secondary);margin-right:4px;"></i> Customize your customer receipts for <strong>58mm</strong> or <strong>80mm</strong> Bluetooth / USB thermal slip printers.
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">PRINTER PAPER WIDTH</label>
+                        <select id="receiptPaperSize" onchange="updateReceiptPreview()" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-weight:600;">
+                            <option value="58mm">58mm (2-inch Thermal Roll POS - Recommended)</option>
+                            <option value="80mm">80mm (3-inch Wide Thermal Roll POS)</option>
+                            <option value="a4">Standard A4 / Voucher Page</option>
+                        </select>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="form-group">
+                            <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">STORE / BRAND NAME</label>
+                            <input type="text" id="receiptShopName" oninput="updateReceiptPreview()" placeholder="KJR SEVA KENDRA" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">PHONE / WHATSAPP</label>
+                            <input type="text" id="receiptShopPhone" oninput="updateReceiptPreview()" placeholder="9090338805" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">SUB-HEADER / BUSINESS TAGLINE</label>
+                        <input type="text" id="receiptTagline" oninput="updateReceiptPreview()" placeholder="Kendujhar, Odisha | Cyber & Seva Kendra" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">STORE ADDRESS</label>
+                        <input type="text" id="receiptAddress" oninput="updateReceiptPreview()" placeholder="At-Jagannathpur, In Front of HDFC Bank, Kendujhar - 758001" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);">
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="form-group">
+                            <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">GSTIN / CSC ID / REG NO</label>
+                            <input type="text" id="receiptGstin" oninput="updateReceiptPreview()" placeholder="CSC ID: 412589632145" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">FONT SIZE</label>
+                            <select id="receiptFontSize" onchange="updateReceiptPreview()" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);">
+                                <option value="compact">Compact (10px / Dense)</option>
+                                <option value="standard" selected>Standard (12px / Balanced)</option>
+                                <option value="large">Large (14px / Bold)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--bg-body);padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-color);">
+                        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+                            <input type="checkbox" id="receiptShowLogo" onchange="updateReceiptPreview()" style="accent-color:var(--secondary);">
+                            <span>Show Store Logo</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+                            <input type="checkbox" id="receiptDualCopy" onchange="updateReceiptPreview()" style="accent-color:var(--secondary);">
+                            <span>Dual Copy (Customer + Shop)</span>
+                        </label>
+                    </div>
+
+                    <div style="border-top:1px dashed var(--border-color);padding-top:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:6px;">
+                            <input type="checkbox" id="receiptShowQr" onchange="updateReceiptPreview()" style="accent-color:var(--secondary);">
+                            <span><strong>Print UPI Payment QR Code</strong></span>
+                        </label>
+                        <input type="text" id="receiptUpiId" oninput="updateReceiptPreview()" placeholder="Enter UPI ID (e.g. 9090338805@ybl)" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:12px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">FOOTER NOTE / TERMS</label>
+                        <textarea id="receiptFooterNote" oninput="updateReceiptPreview()" rows="2" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:12px;" placeholder="Thank you for visiting! Keep this slip for collection."></textarea>
+                    </div>
+                </div>
+
+                <!-- Right Column: Real-time Live Thermal Slip Preview -->
+                <div style="background:#f8fafc;border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;display:flex;flex-direction:column;align-items:center;">
+                    <div style="width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.5px;"><i class="fas fa-eye"></i> Live Receipt Preview</span>
+                        <span id="previewWidthBadge" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:#e2e8f0;color:#334155;">58mm Roll</span>
+                    </div>
+
+                    <div style="max-height:480px;overflow-y:auto;width:100%;display:flex;justify-content:center;padding:10px 0;">
+                        <div id="thermalLivePreviewSlip" class="paper-slip-visual paper-58mm">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-color);flex-wrap:wrap;gap:10px;">
+                <button type="button" class="btn btn-secondary" onclick="printTestReceipt()"><i class="fas fa-print"></i> Test Print Thermal Slip</button>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeReceiptSettingsModal()">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="saveReceiptSettings()"><i class="fas fa-save"></i> Save Receipt Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MOBILE SCREEN NOTIFICATION SETTINGS MODAL ===== -->
+    <div id="notificationSettingsModal" class="modal">
+        <div class="modal-content" style="max-width:560px;width:95vw;max-height:92vh;overflow-y:auto;">
+            <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding-bottom:12px;margin-bottom:16px;">
+                <h2><i class="fas fa-mobile-alt" style="color:#0284c7;"></i> Mobile Screen Notifications</h2>
+                <span class="close-modal" onclick="closeNotificationSettingsModal()">&times;</span>
+            </div>
+
+            <!-- Device Permission Status Card -->
+            <div id="notifStatusBox" style="padding:14px;border-radius:var(--radius-md);margin-bottom:16px;background:rgba(2,132,199,0.08);border:1px solid rgba(2,132,199,0.25);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="notifStatusIcon" style="font-size:20px;">📱</span>
+                        <strong>Mobile Notification Screen Status</strong>
+                    </div>
+                    <span id="notifStatusBadge" class="badge" style="background:#eab308;color:white;font-weight:700;">Checking...</span>
+                </div>
+                <p id="notifStatusDesc" style="font-size:12px;color:var(--text-secondary);line-height:1.4;margin-top:4px;">
+                    Allow notifications to receive instant pop-up alerts on your mobile phone screen, status bar, and lock screen.
+                </p>
+                <div id="notifEnableActionRow" style="margin-top:10px;display:none;">
+                    <button type="button" class="btn btn-primary" onclick="requestNotificationPermission()" style="width:100%;justify-content:center;background:linear-gradient(135deg,#0284c7,#0369a1);"><i class="fas fa-bell"></i> Allow Mobile Notifications</button>
+                </div>
+                <div id="notifBlockedHelp" style="margin-top:10px;display:none;background:rgba(220,38,38,0.1);padding:10px;border-radius:var(--radius-sm);font-size:11px;color:#dc2626;line-height:1.4;">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Notifications are blocked in your browser:</strong><br>
+                    Tap the padlock / tune icon (🔒) in your Chrome or Safari address bar &rarr; Tap <strong>Site settings</strong> / <strong>Permissions</strong> &rarr; Set <strong>Notifications</strong> to <strong>Allow</strong>.
+                </div>
+            </div>
+
+            <!-- Instant & Lock-Screen Test Section -->
+            <div style="background:var(--bg-body);border:1px solid var(--border-color);padding:12px;border-radius:var(--radius-md);margin-bottom:16px;">
+                <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:6px;">TEST ON YOUR PHONE SCREEN</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <button type="button" class="btn btn-info btn-sm" onclick="testMobileNotification(0)" style="justify-content:center;"><i class="fas fa-bolt"></i> Instant Test Alert</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="testMobileNotification(5)" style="justify-content:center;"><i class="fas fa-hourglass-start"></i> 5s Lock-Screen Test</button>
+                </div>
+                <div id="notifTestCountdownBanner" style="display:none;margin-top:10px;padding:8px 12px;background:#fef3c7;border:1px solid #fde047;border-radius:var(--radius-sm);font-size:12px;color:#854d0e;text-align:center;font-weight:600;">
+                    <span id="countdownSeconds">5</span>s remaining &mdash; Lock your phone screen now!
+                </div>
+            </div>
+
+            <!-- Event Triggers Toggles -->
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.5px;">Notification Alerts &amp; Triggers</div>
+                
+                <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);"><i class="fas fa-plus-circle" style="color:var(--secondary);margin-right:6px;"></i> New Customer Work Logged</div>
+                        <div style="font-size:11px;color:var(--text-secondary);">When staff registers completed work</div>
+                    </div>
+                    <input type="checkbox" id="notifToggleWork" checked style="width:18px;height:18px;accent-color:var(--secondary);">
+                </label>
+
+                <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);"><i class="fas fa-money-bill-wave" style="color:#f59e0b;margin-right:6px;"></i> Staff Payout Requests &amp; Approvals</div>
+                        <div style="font-size:11px;color:var(--text-secondary);">When staff requests wallet withdrawal or payment is approved</div>
+                    </div>
+                    <input type="checkbox" id="notifTogglePayout" checked style="width:18px;height:18px;accent-color:var(--secondary);">
+                </label>
+
+                <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);"><i class="fas fa-clock" style="color:#3b82f6;margin-right:6px;"></i> Staff Attendance Clock-In / Out</div>
+                        <div style="font-size:11px;color:var(--text-secondary);">When employee starts or ends their work shift</div>
+                    </div>
+                    <input type="checkbox" id="notifToggleAttendance" checked style="width:18px;height:18px;accent-color:var(--secondary);">
+                </label>
+
+                <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);"><i class="fab fa-whatsapp" style="color:#22c55e;margin-right:6px;"></i> Team Chat &amp; Incoming Calls</div>
+                        <div style="font-size:11px;color:var(--text-secondary);">When staff or owner sends a team message or calls</div>
+                    </div>
+                    <input type="checkbox" id="notifToggleChat" checked style="width:18px;height:18px;accent-color:var(--secondary);">
+                </label>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
+                    <label style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;">
+                        <span style="font-size:12px;font-weight:600;"><i class="fas fa-volume-up" style="margin-right:6px;color:var(--accent);"></i> Audio Bell Chime</span>
+                        <input type="checkbox" id="notifToggleSound" checked style="width:16px;height:16px;accent-color:var(--secondary);">
+                    </label>
+                    <label style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;">
+                        <span style="font-size:12px;font-weight:600;"><i class="fas fa-mobile" style="margin-right:6px;color:var(--secondary);"></i> Phone Vibration</span>
+                        <input type="checkbox" id="notifToggleVibrate" checked style="width:16px;height:16px;accent-color:var(--secondary);">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary" onclick="closeNotificationSettingsModal()">Close</button>
+                <button type="button" class="btn btn-success" onclick="saveNotificationSettings()"><i class="fas fa-save"></i> Save Preferences</button>
+            </div>
+        </div>
     </div>
 
     <!-- ===== CLOUD CONFIGURATION MODAL ===== -->
@@ -4893,6 +5216,11 @@
             saveOwners();
             updateNotificationBadge();
             addActivity(title, body, type);
+
+            // Trigger real Mobile Notification Screen Alert, Sound & Vibration
+            if (typeof triggerScreenNotificationIfEnabled === 'function') {
+                triggerScreenNotificationIfEnabled(title, body, type);
+            }
         }
 
         function updateNotificationBadge() {
@@ -4965,7 +5293,10 @@
             list.innerHTML = `
                 <div style="padding:10px 14px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border-radius:var(--radius-md) var(--radius-md) 0 0;">
                     <strong style="font-size:12px;color:var(--text-primary);"><i class="fas fa-bell"></i> Store Alerts &amp; Activity</strong>
-                    <button type="button" onclick="clearAllNotifications(event)" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:11px;text-decoration:underline;">Clear all</button>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <button type="button" onclick="openNotificationSettingsModal(); event.stopPropagation();" style="background:none;border:none;cursor:pointer;color:var(--secondary);font-size:11px;font-weight:700;"><i class="fas fa-cog"></i> Mobile Alerts</button>
+                        <button type="button" onclick="clearAllNotifications(event)" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:11px;text-decoration:underline;">Clear all</button>
+                    </div>
                 </div>
                 <div style="max-height:300px;overflow-y:auto;">
                     ${notifs.map(n => `
@@ -5772,38 +6103,542 @@
         // =============================================
         // CUSTOMER RECEIPT & WHATSAPP SLIP (NEW FEATURE)
         // =============================================
-        function printReceipt(workId) {
-            const entry = currentOwner.workEntries.find(e => String(e.id) === String(workId));
-            if (!entry) return;
+        // =============================================
+        // THERMAL RECEIPT & POS PRINT CUSTOMIZATION SYSTEM
+        // =============================================
+        function getReceiptSettings() {
+            const defaults = {
+                paperSize: '58mm',
+                shopName: (currentOwner && currentOwner.businessName) ? currentOwner.businessName : 'KJR SEVA KENDRA',
+                phone: (currentOwner && currentOwner.mobile) ? currentOwner.mobile : '9090338805',
+                tagline: 'Kendujhar, Odisha | Cyber & Seva Kendra',
+                address: 'At-Jagannathpur, In Front of HDFC Bank, Kendujhar - 758001',
+                gstin: 'CSC ID: 412589632145',
+                fontSize: 'standard',
+                showLogo: true,
+                dualCopy: false,
+                showQr: true,
+                upiId: '9090338805@ybl',
+                footerNote: 'Thank you for visiting! Keep this slip for collection.'
+            };
+            if (!currentOwner) return defaults;
+            if (!currentOwner.receiptSettings) {
+                currentOwner.receiptSettings = { ...defaults };
+            }
+            return Object.assign({}, defaults, currentOwner.receiptSettings);
+        }
 
-            const html = `
-                <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:8px;margin-bottom:8px;">
-                    <h3 style="margin:0;font-size:16px;">${currentOwner.businessName || 'KJR SEVA KENDRA'}</h3>
-                    <div style="font-size:11px;">Kendujhar, Odisha | Contact: ${currentOwner.mobile || '9090338805'}</div>
-                    <div style="font-size:10px;margin-top:4px;">CUSTOMER RECEIPT / ACKNOWLEDGMENT</div>
-                </div>
-                <div style="font-size:12px;line-height:1.6;">
-                    <div><strong>Date:</strong> ${entry.date} ${entry.time || ''}</div>
-                    <div><strong>Receipt No:</strong> KJR-${String(entry.id).slice(-6)}</div>
-                    <div><strong>Customer:</strong> ${entry.customerName || 'Walk-in'}</div>
-                    <div><strong>Phone:</strong> ${entry.customerPhone || 'N/A'}</div>
-                    <div><strong>Service:</strong> ${entry.workName}</div>
-                    <div><strong>Copies:</strong> Print: ${entry.printCopies || 0} | Scan: ${entry.scanCopies || 0}</div>
-                    <div style="font-size:14px;font-weight:bold;margin:8px 0;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:4px 0;">
-                        TOTAL AMOUNT PAID: ₹${(entry.customerPayment || entry.customerPrice || 0).toFixed(2)}
+        function openReceiptSettingsModal() {
+            const s = getReceiptSettings();
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val !== undefined ? val : ''; };
+            const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+
+            setVal('receiptPaperSize', s.paperSize);
+            setVal('receiptShopName', s.shopName);
+            setVal('receiptShopPhone', s.phone);
+            setVal('receiptTagline', s.tagline);
+            setVal('receiptAddress', s.address);
+            setVal('receiptGstin', s.gstin);
+            setVal('receiptFontSize', s.fontSize);
+            setChk('receiptShowLogo', s.showLogo);
+            setChk('receiptDualCopy', s.dualCopy);
+            setChk('receiptShowQr', s.showQr);
+            setVal('receiptUpiId', s.upiId);
+            setVal('receiptFooterNote', s.footerNote);
+
+            updateReceiptPreview();
+            document.getElementById('receiptSettingsModal').classList.add('show');
+        }
+
+        function closeReceiptSettingsModal() {
+            document.getElementById('receiptSettingsModal').classList.remove('show');
+        }
+
+        function getReceiptFormSettings() {
+            const getVal = (id) => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
+            const getChk = (id) => (document.getElementById(id) ? document.getElementById(id).checked : false);
+            return {
+                paperSize: getVal('receiptPaperSize') || '58mm',
+                shopName: getVal('receiptShopName') || (currentOwner?.businessName || 'KJR SEVA KENDRA'),
+                phone: getVal('receiptShopPhone') || '9090338805',
+                tagline: getVal('receiptTagline') || '',
+                address: getVal('receiptAddress') || '',
+                gstin: getVal('receiptGstin') || '',
+                fontSize: getVal('receiptFontSize') || 'standard',
+                showLogo: getChk('receiptShowLogo'),
+                dualCopy: getChk('receiptDualCopy'),
+                showQr: getChk('receiptShowQr'),
+                upiId: getVal('receiptUpiId') || '',
+                footerNote: getVal('receiptFooterNote') || 'Thank you for visiting!'
+            };
+        }
+
+        function saveReceiptSettings() {
+            if (!currentOwner) return showToast('Please log in as owner to save settings', 'error');
+            currentOwner.receiptSettings = getReceiptFormSettings();
+            saveOwners();
+            showToast('✅ Thermal receipt settings saved successfully!', 'success');
+            closeReceiptSettingsModal();
+            if (cloudApiUrl) triggerManualSync();
+        }
+
+        function buildReceiptHtml(entry, settings, copyLabel) {
+            const amount = Number(entry.customerPayment || entry.customerPrice || 0).toFixed(2);
+            const serviceName = entry.workName || entry.serviceName || 'Digital Seva Service';
+            const dateStr = entry.date || new Date().toLocaleDateString('en-GB');
+            const timeStr = entry.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const slipNo = 'KJR-' + String(entry.id || Date.now()).slice(-6);
+
+            let fontPx = '12px';
+            if (settings.fontSize === 'compact') fontPx = '10.5px';
+            if (settings.fontSize === 'large') fontPx = '14px';
+
+            const upiQrUrl = (settings.showQr && settings.upiId)
+                ? `https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&data=${encodeURIComponent(`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.shopName)}&am=${amount}&cu=INR`)}`
+                : '';
+
+            return `
+                <div style="font-family:'Courier New',Courier,monospace;font-size:${fontPx};line-height:1.35;color:#000;">
+                    <!-- HEADER -->
+                    <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;">
+                        ${settings.showLogo ? `<div style="margin-bottom:3px;"><img src="logo.jpg" style="max-height:34px;max-width:110px;object-fit:contain;" onerror="this.style.display='none'"></div>` : ''}
+                        <div style="font-weight:900;font-size:1.15em;letter-spacing:0.5px;text-transform:uppercase;">${settings.shopName}</div>
+                        ${settings.tagline ? `<div style="font-size:0.85em;margin-top:2px;color:#222;">${settings.tagline}</div>` : ''}
+                        ${settings.address ? `<div style="font-size:0.8em;margin-top:2px;color:#333;">${settings.address}</div>` : ''}
+                        ${settings.phone ? `<div style="font-size:0.85em;margin-top:2px;"><strong>Contact:</strong> ${settings.phone}</div>` : ''}
+                        ${settings.gstin ? `<div style="font-size:0.85em;font-weight:bold;margin-top:2px;">${settings.gstin}</div>` : ''}
+                        <div style="display:inline-block;margin-top:4px;padding:2px 6px;border:1px solid #000;font-size:0.75em;font-weight:bold;text-transform:uppercase;">
+                            [ ${copyLabel || 'CUSTOMER COPY'} ]
+                        </div>
                     </div>
-                    <div><strong>Served By:</strong> ${entry.employeeName}</div>
-                </div>
-                <div style="text-align:center;font-size:10px;margin-top:12px;border-top:1px dashed #000;padding-top:6px;">
-                    Thank you for visiting! Keep this slip for collection.
+
+                    <!-- META DETAILS -->
+                    <div style="font-size:0.9em;margin-bottom:6px;">
+                        <div style="display:flex;justify-content:space-between;">
+                            <span><strong>Date:</strong> ${dateStr} ${timeStr}</span>
+                            <span><strong>Slip:</strong> #${slipNo}</span>
+                        </div>
+                        <div><strong>Customer:</strong> ${entry.customerName || 'Walk-in'}</div>
+                        ${entry.customerPhone ? `<div><strong>Phone:</strong> ${entry.customerPhone}</div>` : ''}
+                    </div>
+
+                    <!-- ITEM TABLE -->
+                    <div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:5px 0;margin-bottom:6px;">
+                        <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:0.9em;margin-bottom:3px;">
+                            <span>SERVICE / ITEM</span>
+                            <span>AMOUNT</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.9em;">
+                            <span style="max-width:70%;word-break:break-word;">${serviceName}</span>
+                            <span>₹${amount}</span>
+                        </div>
+                        ${(entry.printCopies > 0 || entry.scanCopies > 0) ? `
+                            <div style="font-size:0.8em;color:#444;margin-top:2px;">
+                                Copies: Print ${entry.printCopies || 0} | Scan ${entry.scanCopies || 0}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- TOTAL HIGHLIGHT -->
+                    <div style="border:1.5px solid #000;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:1.05em;background:#fafafa;">
+                        <span>TOTAL PAID:</span>
+                        <span>₹${amount}</span>
+                    </div>
+
+                    <div style="font-size:0.85em;margin-bottom:6px;">
+                        <div><strong>Operator:</strong> ${entry.employeeName || (currentOwner?.name || 'Staff')}</div>
+                        <div><strong>Status:</strong> PAID &amp; COMPLETED</div>
+                    </div>
+
+                    <!-- UPI SCAN-TO-PAY QR -->
+                    ${upiQrUrl ? `
+                        <div style="text-align:center;margin:6px 0;padding:4px;border:1px dashed #888;">
+                            <div style="font-size:0.75em;font-weight:bold;margin-bottom:2px;">SCAN TO PAY VIA UPI</div>
+                            <img src="${upiQrUrl}" style="width:75px;height:75px;display:block;margin:0 auto;" alt="UPI QR" onerror="this.parentElement.style.display='none'">
+                            <div style="font-size:0.75em;margin-top:2px;font-weight:bold;">${settings.upiId}</div>
+                        </div>
+                    ` : ''}
+
+                    <!-- FOOTER NOTE -->
+                    <div style="text-align:center;font-size:0.8em;border-top:1px dashed #000;padding-top:6px;margin-top:6px;line-height:1.3;">
+                        ${settings.footerNote || 'Thank you for visiting! Keep this slip for collection.'}
+                    </div>
                 </div>
             `;
+        }
 
+        function updateReceiptPreview() {
+            const previewEl = document.getElementById('thermalLivePreviewSlip');
+            if (!previewEl) return;
+            const settings = getReceiptFormSettings();
+
+            // Set preview width class
+            previewEl.className = 'paper-slip-visual ' + (
+                settings.paperSize === '80mm' ? 'paper-80mm' :
+                settings.paperSize === 'a4' ? 'paper-a4' : 'paper-58mm'
+            );
+
+            const badge = document.getElementById('previewWidthBadge');
+            if (badge) {
+                badge.textContent = settings.paperSize === '80mm' ? '80mm Wide Roll' :
+                                    settings.paperSize === 'a4' ? 'A4 / Standard' : '58mm Thermal Roll';
+            }
+
+            const demoEntry = {
+                id: 10482,
+                date: new Date().toLocaleDateString('en-GB'),
+                time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                customerName: 'Ramesh Mohanty',
+                customerPhone: '9437123456',
+                workName: 'PAN CARD NEW + LAM',
+                customerPayment: 150,
+                customerPrice: 150,
+                printCopies: 1,
+                scanCopies: 2,
+                employeeName: currentOwner?.name || 'Satyaban Jena'
+            };
+
+            let previewHtml = buildReceiptHtml(demoEntry, settings, 'CUSTOMER COPY');
+            if (settings.dualCopy) {
+                previewHtml += `
+                    <div style="text-align:center;margin:12px 0;font-size:10px;font-weight:bold;letter-spacing:1px;color:#666;">
+                        - - - - - - ✂ CUT HERE ✂ - - - - - -
+                    </div>
+                ` + buildReceiptHtml(demoEntry, settings, 'STORE / MERCHANT COPY');
+            }
+
+            previewEl.innerHTML = previewHtml;
+        }
+
+        function printReceipt(workId) {
+            const entry = currentOwner && currentOwner.workEntries ? currentOwner.workEntries.find(e => String(e.id) === String(workId)) : null;
+            if (!entry) return showToast('Work record not found for receipt printing', 'error');
+
+            const settings = getReceiptSettings();
+            printReceiptWithSettings(entry, settings);
+        }
+
+        function printTestReceipt() {
+            const settings = getReceiptFormSettings();
+            const demoEntry = {
+                id: Math.floor(100000 + Math.random() * 900000),
+                date: new Date().toLocaleDateString('en-GB'),
+                time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                customerName: 'Demo Customer (Test)',
+                customerPhone: '9090338805',
+                workName: 'AADHAAR + LAMINATION (TEST)',
+                customerPayment: 100,
+                customerPrice: 100,
+                printCopies: 1,
+                scanCopies: 1,
+                employeeName: currentOwner?.name || 'Store Operator'
+            };
+            printReceiptWithSettings(demoEntry, settings);
+        }
+
+        function printReceiptWithSettings(entry, settings) {
             const printDiv = document.getElementById('receiptPrintArea');
-            printDiv.innerHTML = html;
+            if (!printDiv) return;
+
+            // Apply paper width class
+            printDiv.className = (
+                settings.paperSize === '80mm' ? 'print-80mm' :
+                settings.paperSize === 'a4' ? 'print-a4' : 'print-58mm'
+            );
+
+            let receiptHtml = buildReceiptHtml(entry, settings, 'CUSTOMER COPY');
+            if (settings.dualCopy) {
+                receiptHtml += `
+                    <div style="text-align:center;margin:12px 0;font-size:10px;font-weight:bold;letter-spacing:1px;color:#000;">
+                        - - - - - - ✂ CUT HERE ✂ - - - - - -
+                    </div>
+                ` + buildReceiptHtml(entry, settings, 'STORE / MERCHANT COPY');
+            }
+
+            printDiv.innerHTML = receiptHtml;
             printDiv.style.display = 'block';
             window.print();
             printDiv.style.display = 'none';
+        }
+
+        // =============================================
+        // MOBILE NOTIFICATION SCREEN & PUSH ALERT ENGINE
+        // =============================================
+        let swRegistration = null;
+
+        function getNotificationSettings() {
+            const defaults = {
+                enabled: true,
+                notifyWork: true,
+                notifyPayout: true,
+                notifyAttendance: true,
+                notifyChat: true,
+                sound: true,
+                vibration: true
+            };
+            if (!currentOwner) return defaults;
+            if (!currentOwner.notificationSettings) {
+                currentOwner.notificationSettings = { ...defaults };
+            }
+            return Object.assign({}, defaults, currentOwner.notificationSettings);
+        }
+
+        function initServiceWorkerAndNotifications() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        swRegistration = reg;
+                        console.log('✅ Mobile Notification Service Worker Registered');
+                    })
+                    .catch(err => {
+                        console.log('SW registration note:', err.message);
+                    });
+            }
+            updateNotificationPermissionUI();
+        }
+
+        function updateNotificationPermissionUI() {
+            const statusBadge = document.getElementById('notifStatusBadge');
+            const statusDesc = document.getElementById('notifStatusDesc');
+            const statusIcon = document.getElementById('notifStatusIcon');
+            const enableRow = document.getElementById('notifEnableActionRow');
+            const blockedHelp = document.getElementById('notifBlockedHelp');
+            const topDot = document.getElementById('topMobileAlertDot');
+
+            if (!('Notification' in window)) {
+                if (statusBadge) { statusBadge.textContent = 'Unsupported'; statusBadge.style.background = '#64748b'; }
+                if (statusDesc) statusDesc.textContent = 'This browser does not support web notification screen alerts.';
+                if (topDot) topDot.style.background = '#64748b';
+                return;
+            }
+
+            const perm = Notification.permission;
+            if (perm === 'granted') {
+                if (statusBadge) { statusBadge.textContent = '🟢 Enabled & Active'; statusBadge.style.background = '#16a34a'; }
+                if (statusDesc) statusDesc.textContent = 'Notifications will pop up on your mobile status bar and lock screen!';
+                if (statusIcon) statusIcon.textContent = '🔔';
+                if (enableRow) enableRow.style.display = 'none';
+                if (blockedHelp) blockedHelp.style.display = 'none';
+                if (topDot) { topDot.style.background = '#16a34a'; topDot.title = 'Mobile Notifications Active 🟢'; }
+            } else if (perm === 'denied') {
+                if (statusBadge) { statusBadge.textContent = '🔴 Blocked'; statusBadge.style.background = '#dc2626'; }
+                if (statusDesc) statusDesc.textContent = 'Notifications are blocked in your browser settings. Unblock to receive alerts.';
+                if (statusIcon) statusIcon.textContent = '🚫';
+                if (enableRow) enableRow.style.display = 'none';
+                if (blockedHelp) blockedHelp.style.display = 'block';
+                if (topDot) { topDot.style.background = '#dc2626'; topDot.title = 'Mobile Notifications Blocked 🔴'; }
+            } else {
+                if (statusBadge) { statusBadge.textContent = '🟡 Permission Needed'; statusBadge.style.background = '#eab308'; }
+                if (statusDesc) statusDesc.textContent = 'Tap the button below to allow notifications on your mobile phone screen.';
+                if (statusIcon) statusIcon.textContent = '📱';
+                if (enableRow) enableRow.style.display = 'block';
+                if (blockedHelp) blockedHelp.style.display = 'none';
+                if (topDot) { topDot.style.background = '#eab308'; topDot.title = 'Tap to Enable Mobile Notifications 🟡'; }
+            }
+        }
+
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                return showToast('Your browser does not support notifications', 'error');
+            }
+            try {
+                const permission = await Notification.requestPermission();
+                updateNotificationPermissionUI();
+                if (permission === 'granted') {
+                    showToast('✅ Mobile Screen Notifications Enabled!', 'success');
+                    showMobileNotification(
+                        '🎉 Mobile Notifications Active!',
+                        'KJR SEVA alerts will now appear on your phone status bar and lock screen.',
+                        'system'
+                    );
+                } else if (permission === 'denied') {
+                    showToast('⚠️ Notifications was blocked. Please enable from browser settings.', 'warning');
+                }
+            } catch (err) {
+                console.error('Permission error:', err);
+            }
+        }
+
+        function openNotificationSettingsModal() {
+            updateNotificationPermissionUI();
+            const s = getNotificationSettings();
+            const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+            setChk('notifToggleWork', s.notifyWork);
+            setChk('notifTogglePayout', s.notifyPayout);
+            setChk('notifToggleAttendance', s.notifyAttendance);
+            setChk('notifToggleChat', s.notifyChat);
+            setChk('notifToggleSound', s.sound);
+            setChk('notifToggleVibrate', s.vibration);
+
+            document.getElementById('notificationSettingsModal').classList.add('show');
+        }
+
+        function closeNotificationSettingsModal() {
+            document.getElementById('notificationSettingsModal').classList.remove('show');
+        }
+
+        function saveNotificationSettings() {
+            if (!currentOwner) return showToast('Please log in to save settings', 'error');
+            const getChk = (id) => (document.getElementById(id) ? document.getElementById(id).checked : true);
+
+            currentOwner.notificationSettings = {
+                enabled: true,
+                notifyWork: getChk('notifToggleWork'),
+                notifyPayout: getChk('notifTogglePayout'),
+                notifyAttendance: getChk('notifToggleAttendance'),
+                notifyChat: getChk('notifToggleChat'),
+                sound: getChk('notifToggleSound'),
+                vibration: getChk('notifToggleVibrate')
+            };
+
+            saveOwners();
+            showToast('✅ Notification preferences saved!', 'success');
+            closeNotificationSettingsModal();
+        }
+
+        function playNotificationChime() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                if (ctx.state === 'suspended') ctx.resume();
+                const now = ctx.currentTime;
+                
+                // Tone 1
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(659.25, now);
+                gain1.gain.setValueAtTime(0.25, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.25);
+
+                // Tone 2
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(880, now + 0.12);
+                gain2.gain.setValueAtTime(0.3, now + 0.12);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(now + 0.12);
+                osc2.stop(now + 0.45);
+            } catch (e) {
+                // AudioContext policy
+            }
+        }
+
+        function showMobileNotification(title, body, category = 'info') {
+            const s = getNotificationSettings();
+
+            // Sound
+            if (s.sound) {
+                playNotificationChime();
+            }
+
+            // Vibration on device
+            if (s.vibration && 'vibrate' in navigator) {
+                try {
+                    navigator.vibrate([200, 100, 200, 100, 200]);
+                } catch (e) {}
+            }
+
+            // Push notification to device screen
+            if (!('Notification' in window) || Notification.permission !== 'granted') {
+                return;
+            }
+
+            const options = {
+                body: body,
+                icon: 'logo.jpg',
+                badge: 'logo.jpg',
+                tag: 'kjr-alert-' + Date.now(),
+                renotify: true,
+                requireInteraction: false,
+                vibrate: [200, 100, 200, 100, 200],
+                data: { url: './kjrseva-portal.html' }
+            };
+
+            if (swRegistration && swRegistration.showNotification) {
+                swRegistration.showNotification(title, options).catch(() => {
+                    try { new Notification(title, options); } catch(e){}
+                });
+            } else if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, options);
+                }).catch(() => {
+                    try { new Notification(title, options); } catch(e){}
+                });
+            } else {
+                try {
+                    new Notification(title, options);
+                } catch (e) {}
+            }
+        }
+
+        let testCountdownTimer = null;
+        function testMobileNotification(delaySeconds = 0) {
+            if (!('Notification' in window)) {
+                return showToast('Notifications are not supported in this browser', 'error');
+            }
+            if (Notification.permission !== 'granted') {
+                requestNotificationPermission();
+                return;
+            }
+
+            if (delaySeconds <= 0) {
+                showMobileNotification(
+                    '🔔 KJR SEVA Alert Test',
+                    'Mobile screen notification is working perfectly on your device!',
+                    'test'
+                );
+                showToast('🚀 Test alert sent to your mobile notification screen!', 'success');
+                return;
+            }
+
+            const banner = document.getElementById('notifTestCountdownBanner');
+            const secEl = document.getElementById('countdownSeconds');
+            if (banner) banner.style.display = 'block';
+
+            let remaining = delaySeconds;
+            if (secEl) secEl.textContent = remaining;
+
+            if (testCountdownTimer) clearInterval(testCountdownTimer);
+            testCountdownTimer = setInterval(() => {
+                remaining--;
+                if (secEl) secEl.textContent = remaining;
+                if (remaining <= 0) {
+                    clearInterval(testCountdownTimer);
+                    if (banner) banner.style.display = 'none';
+                    showMobileNotification(
+                        '📱 Lock Screen Alert — KJR SEVA',
+                        'Customer Ramesh paid ₹150 for PAN Card. Mobile lock screen alerts are active!',
+                        'test'
+                    );
+                }
+            }, 1000);
+        }
+
+        function triggerScreenNotificationIfEnabled(title, body, type = 'info') {
+            const s = getNotificationSettings();
+            if (!s.enabled) return;
+
+            // Match type to preference
+            if (type === 'work' || type === 'success') {
+                if (!s.notifyWork) return;
+            } else if (type === 'payment' || type === 'payout') {
+                if (!s.notifyPayout) return;
+            } else if (type === 'attendance') {
+                if (!s.notifyAttendance) return;
+            } else if (type === 'chat' || type === 'call') {
+                if (!s.notifyChat) return;
+            }
+
+            showMobileNotification(title, body, type);
         }
 
         function sendWhatsAppSlip(workId) {
@@ -10358,6 +11193,9 @@
 
         // Initialize Realtime Cross-Device MQTT Engine (<50ms delivery)
         initRealtimeSync();
+
+        // Initialize Mobile Screen Notifications & Service Worker
+        initServiceWorkerAndNotifications();
 
         console.log('✅ KJRSEVA HRMS 2.2 Enterprise Ready');
         console.log('✅ Google Identity Services Loaded');
