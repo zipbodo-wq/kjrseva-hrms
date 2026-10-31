@@ -5280,6 +5280,10 @@
             { name: "LEGAL HEIR CERTIFICATE", customerPrice: 300, employeePayment: 32, category: "Certificate" },
             { name: "LIFE CERTIFICATE", customerPrice: 80, employeePayment: 11, category: "Certificate" },
             { name: "POLICE VERIFICATION", customerPrice: 170, employeePayment: 20, category: "Government" },
+            { name: "OUSSSC POLICE", customerPrice: 200, employeePayment: 30, category: "Government" },
+            { name: "OSSC RECRUITMENT", customerPrice: 150, employeePayment: 30, category: "Government" },
+            { name: "ODISHA POLICE CONSTABLE", customerPrice: 200, employeePayment: 30, category: "Government" },
+            { name: "SUBHADRA YOJANA", customerPrice: 50, employeePayment: 10, category: "Government" },
             { name: "TRADE LICENCE", customerPrice: 200, employeePayment: 29, category: "Government" },
             { name: "FOOD LICENCE", customerPrice: 160, employeePayment: 28, category: "Government" },
             { name: "KRUSHAK ODISHA", customerPrice: 150, employeePayment: 18, category: "Government" },
@@ -5340,11 +5344,19 @@
 
         function getNormalizedDateStr(raw) {
             if (!raw) return '';
-            if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) {
-                return raw.trim();
+            const str = String(raw).trim();
+            // Match DD-MM-YYYY or DD/MM/YYYY
+            const dmy = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+            if (dmy) {
+                return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`;
+            }
+            // Match YYYY-MM-DD (without T time component)
+            const ymd = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+            if (ymd && !str.includes('T')) {
+                return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
             }
             try {
-                const d = new Date(raw);
+                const d = new Date(str);
                 if (!isNaN(d.getTime())) {
                     const y = d.getFullYear();
                     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -5352,7 +5364,17 @@
                     return `${y}-${m}-${day}`;
                 }
             } catch (e) {}
-            return String(raw).slice(0, 10);
+            return str.slice(0, 10);
+        }
+
+        function formatDisplayDate(raw) {
+            const norm = getNormalizedDateStr(raw);
+            if (!norm) return '-';
+            const parts = norm.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1]}-${parts[0]}`; // Returns DD-MM-YYYY (e.g. 31-10-2026)
+            }
+            return norm;
         }
 
         function isRecordForStaff(record, emp) {
@@ -5659,6 +5681,9 @@
                 const attMap = new Map();
                 cloudData.attendance.forEach(a => {
                     if (!a) return;
+                    if (typeof recentlyDeletedAttendanceIds !== 'undefined' && recentlyDeletedAttendanceIds.has(String(a.id || ''))) {
+                        return; // Skip deleted record so it never comes back
+                    }
                     a.id = String(a.id || ('att_' + Date.now()));
                     a.employeeId = String(a.employeeId || '').trim();
                     a.date = getNormalizedDateStr(a.date);
@@ -6215,6 +6240,15 @@
                         currentOwner.servicesCatalog.push(Object.assign({}, ds));
                         existingNames.add(ds.name.toUpperCase().trim());
                     }
+                });
+            }
+            // Clean any legacy ISO timestamps in attendance from prior sessions
+            if (currentOwner.attendance && Array.isArray(currentOwner.attendance)) {
+                currentOwner.attendance.forEach(a => {
+                    if (!a) return;
+                    a.date = getNormalizedDateStr(a.date);
+                    if (a.checkIn) a.checkIn = formatCleanTime(a.checkIn);
+                    if (a.checkOut) a.checkOut = formatCleanTime(a.checkOut);
                 });
             }
             syncCatalogFromWorkEntries();
@@ -7081,8 +7115,14 @@
             const sel = document.getElementById('ownerWorkSelect');
             if (!listContainer || !sel) return;
 
-            let filtered = servicesCatalog.filter(s => {
-                const matchCat = (ownerSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(ownerSelectedCategory.toLowerCase())));
+            const catalog = (currentOwner && Array.isArray(currentOwner.servicesCatalog) && currentOwner.servicesCatalog.length > 0)
+                ? currentOwner.servicesCatalog
+                : (Array.isArray(servicesCatalog) && servicesCatalog.length > 0 ? servicesCatalog : defaultServices);
+            servicesCatalog = catalog;
+
+            let filtered = catalog.filter(s => {
+                // If user types a search query, search all categories so user never misses matching services!
+                const matchCat = (query.length > 0) || (ownerSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(ownerSelectedCategory.toLowerCase())));
                 const matchQuery = isServiceQueryMatch(s, query);
                 return matchCat && matchQuery;
             });
@@ -7167,8 +7207,13 @@
             const sel = document.getElementById('empWorkSelect');
             if (!listContainer || !sel) return;
 
-            let filtered = servicesCatalog.filter(s => {
-                const matchCat = (empSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(empSelectedCategory.toLowerCase())));
+            const catalog = (currentOwner && Array.isArray(currentOwner.servicesCatalog) && currentOwner.servicesCatalog.length > 0)
+                ? currentOwner.servicesCatalog
+                : (Array.isArray(servicesCatalog) && servicesCatalog.length > 0 ? servicesCatalog : defaultServices);
+            servicesCatalog = catalog;
+
+            let filtered = catalog.filter(s => {
+                const matchCat = (query.length > 0) || (empSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(empSelectedCategory.toLowerCase())));
                 const matchQuery = isServiceQueryMatch(s, query);
                 return matchCat && matchQuery;
             });
@@ -8787,11 +8832,26 @@
             const dateInp = document.getElementById('attendanceDate');
             if (dateInp && !dateInp.value) dateInp.value = todayStr;
 
-            // Calculate Today's Stats (Normalized timezone-safe dates)
+            // Calculate Today's Stats (Normalized timezone-safe dates & deduplicated per staff)
             const todayRecords = currentOwner.attendance.filter(a => getNormalizedDateStr(a.date) === todayStr);
-            const presentCount = todayRecords.length;
-            const activeShiftCount = todayRecords.filter(a => !a.checkOut).length;
-            const completedShiftCount = todayRecords.filter(a => !!a.checkOut).length;
+            
+            // Deduplicate today's records so no staff member is counted twice
+            const uniqueTodayStaffMap = new Map();
+            todayRecords.forEach(r => {
+                const key = (r.employeeId ? String(r.employeeId).trim() : '') || String(r.employeeName || '').trim().toLowerCase();
+                if (!uniqueTodayStaffMap.has(key)) {
+                    uniqueTodayStaffMap.set(key, r);
+                } else {
+                    const existing = uniqueTodayStaffMap.get(key);
+                    if (r.checkOut && !existing.checkOut) {
+                        uniqueTodayStaffMap.set(key, r);
+                    }
+                }
+            });
+            const uniqueTodayRecords = Array.from(uniqueTodayStaffMap.values());
+            const presentCount = uniqueTodayRecords.length;
+            const activeShiftCount = uniqueTodayRecords.filter(a => !a.checkOut).length;
+            const completedShiftCount = uniqueTodayRecords.filter(a => !!a.checkOut).length;
             const absentCount = Math.max(0, activeStaff.length - presentCount);
 
             const summaryEl = document.getElementById('attSummaryGrid');
@@ -8880,10 +8940,10 @@
 
                         return `
                             <tr>
-                                <td><strong>${a.date}</strong></td>
+                                <td><strong>${formatDisplayDate(a.date)}</strong></td>
                                 <td>${a.employeeName}</td>
-                                <td><span style="color:#16a34a;font-weight:600;"><i class="fas fa-sign-in-alt"></i> ${a.checkIn || '-'}</span></td>
-                                <td><span style="color:#dc2626;font-weight:600;"><i class="fas fa-sign-out-alt"></i> ${a.checkOut || '-'}</span></td>
+                                <td><span style="color:#16a34a;font-weight:600;"><i class="fas fa-sign-in-alt"></i> ${formatCleanTime(a.checkIn) || '-'}</span></td>
+                                <td><span style="color:#dc2626;font-weight:600;"><i class="fas fa-sign-out-alt"></i> ${formatCleanTime(a.checkOut) || '-'}</span></td>
                                 <td>${duration}</td>
                                 <td>${statusBadge}</td>
                                 <td>
@@ -9000,8 +9060,11 @@
             if (cloudApiUrl) triggerManualSync();
         }
 
+        let recentlyDeletedAttendanceIds = new Set();
+
         function deleteAttendanceRecord(attId) {
             if (!confirm('Are you sure you want to delete this attendance record?')) return;
+            recentlyDeletedAttendanceIds.add(String(attId));
             currentOwner.attendance = (currentOwner.attendance || []).filter(a => String(a.id) !== String(attId));
             saveOwners();
             renderAttendanceDashboard();
