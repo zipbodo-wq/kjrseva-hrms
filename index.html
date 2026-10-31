@@ -5315,6 +5315,10 @@
             { name: "SCHOLARSHIP APPLY", customerPrice: 150, employeePayment: 26, category: "Education" },
             { name: "SCHOLARSHIP RENEW", customerPrice: 150, employeePayment: 26, category: "Education" },
             { name: "+2/+3/PG/ITI/DIPLO/B.TECH", customerPrice: 150, employeePayment: 26, category: "Education" },
+            { name: "OUSSSC POLICE", customerPrice: 200, employeePayment: 100, category: "Government" },
+            { name: "OSSC RECRUITMENT", customerPrice: 150, employeePayment: 50, category: "Government" },
+            { name: "OSSSC RECRUITMENT", customerPrice: 150, employeePayment: 50, category: "Government" },
+            { name: "EMPLOYMENT EXCHANGE", customerPrice: 200, employeePayment: 70, category: "Government" },
             { name: "OTHER", customerPrice: 10, employeePayment: 10, category: "General" }
         ];
 
@@ -5579,6 +5583,7 @@
             if (!cloudApiUrl) return;
             const ownerData = currentOwner || (owners && owners[0]);
             if (!ownerData) return;
+            if (!ownerData.servicesCatalog) ownerData.servicesCatalog = servicesCatalog;
             try {
                 await fetch(cloudApiUrl, {
                     method: 'POST',
@@ -5688,11 +5693,35 @@
                 if (owners[0]) owners[0].employees = currentOwner.employees;
             }
 
+            if (cloudData.servicesCatalog && Array.isArray(cloudData.servicesCatalog) && cloudData.servicesCatalog.length > 0) {
+                const existingCatalog = currentOwner.servicesCatalog || defaultServices.slice();
+                const catMap = new Map();
+                existingCatalog.forEach(s => {
+                    if (s && s.name) catMap.set(s.name.toUpperCase().trim(), s);
+                });
+                cloudData.servicesCatalog.forEach(cs => {
+                    if (cs && cs.name) {
+                        const key = cs.name.toUpperCase().trim();
+                        catMap.set(key, {
+                            name: cs.name.trim().toUpperCase(),
+                            category: cs.category || 'General',
+                            customerPrice: parseFloat(cs.customerPrice) || 0,
+                            employeePayment: parseFloat(cs.employeePayment) || 0
+                        });
+                    }
+                });
+                currentOwner.servicesCatalog = Array.from(catMap.values());
+                servicesCatalog = currentOwner.servicesCatalog;
+            }
+            syncCatalogFromWorkEntries();
             if (cloudData.chatMessages && Array.isArray(cloudData.chatMessages)) {
                 mergeChatMessages(cloudData.chatMessages);
             }
             saveOwners();
             refreshAllViews();
+            if (typeof renderPriceEditorTable === 'function') renderPriceEditorTable();
+            if (typeof filterServiceOptions === 'function') filterServiceOptions();
+            if (typeof filterEmpServiceOptions === 'function') filterEmpServiceOptions();
         }
 
         function copyStaffInviteLink() {
@@ -6151,7 +6180,20 @@
                 currentOwner.email = 'owner@kjrseva.com';
             }
 
-            servicesCatalog = currentOwner.servicesCatalog || defaultServices;
+            // Ensure any new default services (like OUSSSC POLICE) are automatically merged into existing cached catalog
+            if (!currentOwner.servicesCatalog || currentOwner.servicesCatalog.length === 0) {
+                currentOwner.servicesCatalog = defaultServices.slice();
+            } else {
+                const existingNames = new Set(currentOwner.servicesCatalog.map(s => (s.name || '').toUpperCase().trim()));
+                defaultServices.forEach(ds => {
+                    if (!existingNames.has(ds.name.toUpperCase().trim())) {
+                        currentOwner.servicesCatalog.push(Object.assign({}, ds));
+                        existingNames.add(ds.name.toUpperCase().trim());
+                    }
+                });
+            }
+            syncCatalogFromWorkEntries();
+            servicesCatalog = currentOwner.servicesCatalog;
             saveOwners();
 
             // Check if user previously hid Google login
@@ -6948,6 +6990,66 @@
             filterEmpServiceOptions();
         }
 
+        // Smart flexible search matcher (handles typos, repeated letters like 'oussc' vs 'ousssc', abbreviations)
+        function isServiceQueryMatch(service, query) {
+            if (!query) return true;
+            const q = query.toLowerCase().trim();
+            const name = (service.name || '').toLowerCase();
+            const cat = (service.category || '').toLowerCase();
+
+            // 1. Direct contains in name or category
+            if (name.includes(q) || cat.includes(q)) return true;
+
+            // 2. Normalize repeated letters and ou/o (handles 'oussc' vs 'ousssc', 'ossc' vs 'ousssc')
+            const norm = (str) => str.toLowerCase().replace(/ou/g, 'o').replace(/(.)\1+/g, '$1');
+            const qNorm = norm(q);
+            const nameNorm = norm(name);
+            if (qNorm && (nameNorm.includes(qNorm) || norm(cat).includes(qNorm))) return true;
+
+            // 3. Multi-word search (e.g. "police oussc" or "ossc police")
+            const words = q.split(/[\s/,-]+/).filter(Boolean);
+            if (words.length > 1 && words.every(w => name.includes(w) || norm(name).includes(norm(w)))) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function syncCatalogFromWorkEntries() {
+            if (!currentOwner) currentOwner = owners[0] || {};
+            if (!currentOwner) return;
+            const entries = currentOwner.workEntries || [];
+            if (!currentOwner.servicesCatalog || currentOwner.servicesCatalog.length === 0) {
+                currentOwner.servicesCatalog = defaultServices.slice();
+            }
+            const catMap = new Map();
+            currentOwner.servicesCatalog.forEach(s => {
+                if (s && s.name) catMap.set(s.name.toUpperCase().trim(), s);
+            });
+
+            let addedCount = 0;
+            entries.forEach(entry => {
+                const wName = (entry.workName || '').toUpperCase().trim();
+                if (wName && wName !== 'OTHER' && !catMap.has(wName)) {
+                    const newSvc = {
+                        name: wName,
+                        category: 'Government',
+                        customerPrice: parseFloat(entry.customerPrice) || 0,
+                        employeePayment: parseFloat(entry.employeePayment) || 0
+                    };
+                    currentOwner.servicesCatalog.push(newSvc);
+                    catMap.set(wName, newSvc);
+                    addedCount++;
+                }
+            });
+
+            if (addedCount > 0) {
+                servicesCatalog = currentOwner.servicesCatalog;
+                saveOwners();
+                console.log(`✅ Auto-discovered ${addedCount} services from work entries into catalog (e.g. OUSSSC POLICE)`);
+            }
+        }
+
         function filterServiceOptions() {
             const query = (document.getElementById('serviceSearchInput')?.value || '').toLowerCase().trim();
             const listContainer = document.getElementById('ownerServicePickerList');
@@ -6956,7 +7058,7 @@
 
             let filtered = servicesCatalog.filter(s => {
                 const matchCat = (ownerSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(ownerSelectedCategory.toLowerCase())));
-                const matchQuery = !query || s.name.toLowerCase().includes(query) || (s.category && s.category.toLowerCase().includes(query));
+                const matchQuery = isServiceQueryMatch(s, query);
                 return matchCat && matchQuery;
             });
 
@@ -7042,7 +7144,7 @@
 
             let filtered = servicesCatalog.filter(s => {
                 const matchCat = (empSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(empSelectedCategory.toLowerCase())));
-                const matchQuery = !query || s.name.toLowerCase().includes(query) || (s.category && s.category.toLowerCase().includes(query));
+                const matchQuery = isServiceQueryMatch(s, query);
                 return matchCat && matchQuery;
             });
 
@@ -9577,9 +9679,21 @@
             showToast(`✅ Added "${name}" to shop catalog!`, 'success');
 
             if (typeof publishRealtimeMqtt === 'function') {
-                publishRealtimeMqtt('serviceCatalog', { type: 'catalogUpdated' });
+                publishRealtimeMqtt('serviceCatalog', {
+                    type: 'catalogUpdated',
+                    catalog: currentOwner.servicesCatalog,
+                    newService: newService
+                });
             }
-            if (cloudApiUrl) triggerManualSync();
+            if (cloudApiUrl) {
+                fetch(cloudApiUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'updateServicesCatalog', catalog: currentOwner.servicesCatalog })
+                }).catch(e => console.warn('Cloud catalog save error:', e));
+                triggerManualSync();
+            }
         }
 
         function openEditServiceDialog(idx) {
@@ -10202,6 +10316,19 @@
                             showToast('🎉 Your work was approved by the Owner! Wallet credited.', 'success');
                             addNotification('✅ Work Approved', `Owner approved: ${entry.workName || 'Job'}`, 'success');
                         }
+                    }
+                } else if (topic.endsWith('/serviceCatalog')) {
+                    if (data.type === 'catalogUpdated' && data.catalog && Array.isArray(data.catalog)) {
+                        console.log('⚡ Received Realtime Service Catalog update via MQTT:', data.catalog.length);
+                        if (!currentOwner) currentOwner = owners[0] || {};
+                        currentOwner.servicesCatalog = data.catalog;
+                        servicesCatalog = data.catalog;
+                        saveOwners();
+                        if (typeof renderPriceEditorTable === 'function') renderPriceEditorTable();
+                        if (typeof filterServiceOptions === 'function') filterServiceOptions();
+                        if (typeof filterEmpServiceOptions === 'function') filterEmpServiceOptions();
+                        const svcName = data.newService ? data.newService.name : 'New service';
+                        showToast(`🔔 Service Catalog updated: "${svcName}" is now available!`, 'info');
                     }
                 }
             } catch (e) {
