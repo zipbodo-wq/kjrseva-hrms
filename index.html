@@ -3466,6 +3466,8 @@
                         <button class="btn btn-sm btn-success" onclick="openStaffBroadcastModal()"
                             title="Send WhatsApp notification to staff"><i class="fab fa-whatsapp"></i> Staff WhatsApp
                             Hub</button>
+                        <button id="toggleStaffIncomeVisibilityBtn" class="btn btn-sm btn-secondary" onclick="toggleStaffIncomeVisibility()"
+                            title="Toggle Hide / Show Staff Income amounts"><i class="fas fa-eye-slash"></i> Hide Income</button>
                         <span class="badge badge-info" id="employeeCountDisplay">Total: 0</span>
                     </div>
                 </div>
@@ -3485,6 +3487,10 @@
                     <button class="filter-btn staff-period-btn" data-staffperiod="month" onclick="setStaffEarningPeriod('month')">📅 This Month</button>
                     <button class="filter-btn staff-period-btn" data-staffperiod="year" onclick="setStaffEarningPeriod('year')">📈 This Year</button>
                     <button class="filter-btn staff-period-btn" data-staffperiod="all" onclick="setStaffEarningPeriod('all')">📋 All Time</button>
+                    <div style="display:inline-flex;align-items:center;gap:4px;margin-left:4px;">
+                        <span style="font-size:11px;color:var(--text-secondary);">Month:</span>
+                        <input type="month" id="staffFilterMonth" onchange="applyStaffMonthPicker(this.value)" style="padding:3px 8px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;" title="Pick specific month">
+                    </div>
                     <div style="margin-left:auto;display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
                         <input type="date" id="staffFilterStartDate" style="width:130px;padding:4px 8px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;">
                         <span style="font-size:11px;color:var(--text-secondary);">to</span>
@@ -5233,6 +5239,19 @@
         </div>
     </div>
 
+    <!-- Detailed Staff Performance & Services Breakdown Modal -->
+    <div id="staffDetailReportModal" class="modal">
+        <div class="modal-content" style="max-width:980px;width:95vw;max-height:92vh;overflow-y:auto;">
+            <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+                <h2 id="staffDetailModalTitle" style="font-size:1.15rem;display:flex;align-items:center;gap:8px;margin:0;">
+                    <i class="fas fa-user-tie" style="color:var(--secondary);"></i> Staff Detailed Performance Report
+                </h2>
+                <span class="close-modal" onclick="closeStaffDetailModal()" style="font-size:24px;cursor:pointer;line-height:1;">&times;</span>
+            </div>
+            <div id="staffDetailModalContent"></div>
+        </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
     <!-- ============================================ -->
@@ -5868,7 +5887,8 @@
                 const result = await res.json();
                 if (result.status === 'success' && result.data) {
                     mergeCloudData(result.data);
-                    renderEmployeeList();
+                    updateStaffIncomeToggleBtn();
+            renderEmployeeList();
                     updateOwnerSelectors();
                     showToast(`✅ Staff updated! (${currentOwner.employees.length} team members)`, 'success');
                 } else {
@@ -7789,6 +7809,43 @@
         let currentStaffPeriod = 'today';
         let staffCustomStartDate = '';
         let staffCustomEndDate = '';
+        let staffSelectedMonth = '';
+        let isStaffIncomeHidden = localStorage.getItem('kjr_hide_staff_income') === '1';
+
+        function toggleStaffIncomeVisibility() {
+            isStaffIncomeHidden = !isStaffIncomeHidden;
+            localStorage.setItem('kjr_hide_staff_income', isStaffIncomeHidden ? '1' : '0');
+            updateStaffIncomeToggleBtn();
+            renderEmployeeList();
+            showToast(isStaffIncomeHidden ? '🙈 Staff income hidden for privacy' : '👁️ Staff income visible', 'info');
+        }
+
+        function updateStaffIncomeToggleBtn() {
+            const btn = document.getElementById('toggleStaffIncomeVisibilityBtn');
+            if (btn) {
+                btn.innerHTML = isStaffIncomeHidden
+                    ? '<i class="fas fa-eye"></i> Show Income'
+                    : '<i class="fas fa-eye-slash"></i> Hide Income';
+                btn.classList.toggle('btn-warning', isStaffIncomeHidden);
+                btn.classList.toggle('btn-secondary', !isStaffIncomeHidden);
+            }
+        }
+
+        function maskStaffAmount(val) {
+            if (isStaffIncomeHidden) return '₹••••';
+            return '₹' + (parseFloat(val) || 0).toFixed(2);
+        }
+
+        function applyStaffMonthPicker(val) {
+            if (!val) return;
+            currentStaffPeriod = 'month_picker';
+            staffSelectedMonth = val; // format: 'YYYY-MM'
+            staffCustomStartDate = '';
+            staffCustomEndDate = '';
+            document.querySelectorAll('#employeesSection .staff-period-btn').forEach(b => b.classList.remove('active'));
+            renderEmployeeList();
+            showToast(`📅 Showing staff income for ${getStaffPeriodLabel('month_picker')}`, 'info');
+        }
 
         function filterEmployees(status) {
             currentEmpStatusFilter = status;
@@ -7825,7 +7882,7 @@
             setStaffEarningPeriod('today');
         }
 
-        function isDateInPeriod(rawDate, period, startDate, endDate) {
+        function isDateInPeriod(rawDate, period, startDate, endDate, pickedMonth) {
             const norm = getNormalizedDateStr(rawDate);
             if (!norm) return false;
             const todayStr = getTodayStr();
@@ -7838,6 +7895,11 @@
             }
             if (period === 'custom' && startDate && endDate) {
                 return norm >= startDate && norm <= endDate;
+            }
+            if (period === 'month_picker') {
+                const targetMonth = pickedMonth || staffSelectedMonth;
+                if (!targetMonth) return true;
+                return norm.startsWith(targetMonth);
             }
 
             const parts = norm.split('-');
@@ -7862,6 +7924,13 @@
             if (period === 'month') return "This Month (" + new Date().toLocaleString('default', { month: 'short', year: 'numeric' }) + ")";
             if (period === 'year') return "This Year (" + new Date().getFullYear() + ")";
             if (period === 'all') return "All Time";
+            if (period === 'month_picker' && staffSelectedMonth) {
+                try {
+                    const [py, pm] = staffSelectedMonth.split('-');
+                    const d = new Date(parseInt(py, 10), parseInt(pm, 10) - 1, 1);
+                    return d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                } catch(e) { return staffSelectedMonth; }
+            }
             if (period === 'custom' && staffCustomStartDate && staffCustomEndDate) {
                 return `${formatDisplayDate(staffCustomStartDate)} to ${formatDisplayDate(staffCustomEndDate)}`;
             }
@@ -7946,6 +8015,8 @@
                     }
                 }
 
+                const payLabel = isStaffIncomeHidden ? 'Pay Staff' : `Pay Staff (₹${walletBalance.toFixed(0)})`;
+
                 return `
                 <div class="employee-card" style="border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px;background:var(--bg-card);box-shadow:var(--shadow-sm);transition:var(--transition);">
                     <!-- Top Info Row -->
@@ -7968,7 +8039,10 @@
                         <!-- Action Buttons -->
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                             <button class="btn btn-primary btn-xs" onclick="quickPayStaff('${e.id}', ${walletBalance})" style="padding:4px 10px;font-weight:700;" title="Record payout for ${e.name}">
-                                <i class="fas fa-hand-holding-usd"></i> Pay Staff (₹${walletBalance.toFixed(0)})
+                                <i class="fas fa-hand-holding-usd"></i> ${payLabel}
+                            </button>
+                            <button class="btn btn-info btn-xs" onclick="openStaffDetailModal('${e.id}')" style="padding:4px 10px;" title="View all detailed work entries and services for ${e.name}">
+                                <i class="fas fa-list-alt"></i> All Details
                             </button>
                             ${hasValidPhone ? `
                                 <button class="btn btn-success btn-xs" onclick="sendWhatsAppToStaff('${e.id}')" title="Chat on WhatsApp" style="padding:4px 8px;">
@@ -8001,22 +8075,22 @@
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;">
                             <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
                                 <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">💰 Commission Earned</div>
-                                <div style="font-size:16px;font-weight:800;color:#16a34a;margin-top:2px;">₹${earned.toFixed(2)}</div>
+                                <div style="font-size:16px;font-weight:800;color:#16a34a;margin-top:2px;">${maskStaffAmount(earned)}</div>
                                 <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">${taskCount} services completed</div>
                             </div>
                             <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
                                 <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">🏪 Shop Revenue Generated</div>
-                                <div style="font-size:16px;font-weight:800;color:#2563eb;margin-top:2px;">₹${revenue.toFixed(2)}</div>
+                                <div style="font-size:16px;font-weight:800;color:#2563eb;margin-top:2px;">${maskStaffAmount(revenue)}</div>
                                 <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">Customer collections</div>
                             </div>
                             <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
                                 <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">💵 Payouts Received</div>
-                                <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-top:2px;">₹${payouts.toFixed(2)}</div>
+                                <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-top:2px;">${maskStaffAmount(payouts)}</div>
                                 <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">In ${periodLabel}</div>
                             </div>
                             <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
                                 <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">👛 Pending Wallet</div>
-                                <div style="font-size:16px;font-weight:800;color:${walletBalance > 0 ? '#d97706' : '#16a34a'};margin-top:2px;">₹${walletBalance.toFixed(2)}</div>
+                                <div style="font-size:16px;font-weight:800;color:${walletBalance > 0 ? '#d97706' : '#16a34a'};margin-top:2px;">${maskStaffAmount(walletBalance)}</div>
                                 <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">${walletBalance > 0 ? '⚠️ Due for payout' : '✅ All clear'}</div>
                             </div>
                         </div>
@@ -8040,17 +8114,17 @@
                         </div>
                         <div>
                             <div style="font-size:10px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">💰 Total Staff Commissions</div>
-                            <div style="font-size:18px;font-weight:800;color:#16a34a;margin-top:2px;">₹${teamTotalEarned.toFixed(2)}</div>
+                            <div style="font-size:18px;font-weight:800;color:#16a34a;margin-top:2px;">${maskStaffAmount(teamTotalEarned)}</div>
                             <div style="font-size:11px;color:var(--text-secondary);">Earned in ${periodLabel}</div>
                         </div>
                         <div>
                             <div style="font-size:10px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">🏪 Total Customer Revenue</div>
-                            <div style="font-size:18px;font-weight:800;color:#2563eb;margin-top:2px;">₹${teamTotalRevenue.toFixed(2)}</div>
+                            <div style="font-size:18px;font-weight:800;color:#2563eb;margin-top:2px;">${maskStaffAmount(teamTotalRevenue)}</div>
                             <div style="font-size:11px;color:var(--text-secondary);">Generated by team</div>
                         </div>
                         <div>
                             <div style="font-size:10px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">👛 Total Pending Wallets</div>
-                            <div style="font-size:18px;font-weight:800;color:${teamTotalPendingWallet > 0 ? '#d97706' : '#16a34a'};margin-top:2px;">₹${teamTotalPendingWallet.toFixed(2)}</div>
+                            <div style="font-size:18px;font-weight:800;color:${teamTotalPendingWallet > 0 ? '#d97706' : '#16a34a'};margin-top:2px;">${maskStaffAmount(teamTotalPendingWallet)}</div>
                             <div style="font-size:11px;color:var(--text-secondary);">${teamTotalPendingWallet > 0 ? 'Unpaid commission balance' : 'All balances settled'}</div>
                         </div>
                     </div>
@@ -10020,39 +10094,7 @@
             }
 
             if (period === 'employee') {
-                const employees = currentOwner.employees || [];
-                container.innerHTML = `
-                    <div style="margin-top:14px;">
-                        <h4 style="font-size:13px;color:var(--text-primary);margin-bottom:10px;">${periodTitle}</h4>
-                        <div class="table-wrap">
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th>Staff Member</th><th>Role / Dept</th><th>Tasks Approved</th><th>Total Revenue Generated</th><th>Commission Earned</th><th>Payouts Received</th><th>Pending Wallet</th></tr>
-                                </thead>
-                                <tbody>
-                                    ${employees.map(emp => {
-                    const empWork = approved.filter(w => isRecordForStaff(w, emp));
-                    const rev = empWork.reduce((s, w) => s + (w.customerPrice || 0), 0);
-                    const earned = empWork.reduce((s, w) => s + (w.employeePayment || 0), 0);
-                    const paid = (currentOwner.paymentRecords || []).filter(p => isRecordForStaff(p, emp)).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
-                    const pending = Math.max(0, earned - paid);
-                    return `
-                                            <tr>
-                                                <td><strong>${emp.name}</strong></td>
-                                                <td>${emp.designation || 'Staff'} • ${emp.department || '-'}</td>
-                                                <td><span class="badge badge-info">${empWork.length}</span></td>
-                                                <td><strong style="color:var(--secondary);">₹${rev.toFixed(2)}</strong></td>
-                                                <td>₹${earned.toFixed(2)}</td>
-                                                <td>₹${paid.toFixed(2)}</td>
-                                                <td><span style="font-weight:700;color:${pending > 0 ? '#16a34a' : 'var(--text-light)'};">₹${pending.toFixed(2)}</span></td>
-                                            </tr>
-                                        `;
-                }).join('') || '<tr><td colspan="7" class="empty-state">No active employees</td></tr>'}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
+                renderComprehensiveStaffReport();
                 return;
             }
 
@@ -12511,6 +12553,497 @@
         console.log('✅ Google Identity Services Loaded');
         console.log('✅ Google Sheets Cloud Sync Engine Ready');
         console.log('✅ Realtime Cross-Device Engine (Mobile <-> PC) Ready');
+    
+
+// =============================================
+        // COMPREHENSIVE BUSINESS REPORT - STAFF MASTER
+        // =============================================
+        let reportStaffPeriod = 'month';
+        let reportStaffStartDate = '';
+        let reportStaffEndDate = '';
+        let reportStaffSelectedMonth = '';
+
+        function setReportStaffPeriod(period) {
+            reportStaffPeriod = period;
+            reportStaffStartDate = '';
+            reportStaffEndDate = '';
+            reportStaffSelectedMonth = '';
+            renderComprehensiveStaffReport();
+        }
+
+        function applyReportStaffMonth(val) {
+            if (!val) return;
+            reportStaffPeriod = 'month_picker';
+            reportStaffSelectedMonth = val;
+            reportStaffStartDate = '';
+            reportStaffEndDate = '';
+            renderComprehensiveStaffReport();
+        }
+
+        function applyReportStaffRange() {
+            const start = document.getElementById('repStaffStart')?.value;
+            const end = document.getElementById('repStaffEnd')?.value;
+            if (!start || !end) return showToast('⚠️ Select both start and end dates', 'warning');
+            if (start > end) return showToast('⚠️ Start date cannot be after end date', 'warning');
+            reportStaffPeriod = 'custom';
+            reportStaffStartDate = start;
+            reportStaffEndDate = end;
+            renderComprehensiveStaffReport();
+            showToast(`📆 Report filtered: ${formatDisplayDate(start)} to ${formatDisplayDate(end)}`, 'info');
+        }
+
+        function clearReportStaffRange() {
+            reportStaffPeriod = 'month';
+            reportStaffStartDate = '';
+            reportStaffEndDate = '';
+            reportStaffSelectedMonth = '';
+            renderComprehensiveStaffReport();
+        }
+
+        function getReportStaffPeriodTitle() {
+            if (reportStaffPeriod === 'today') return "Today's Performance (" + formatDisplayDate(getTodayStr()) + ")";
+            if (reportStaffPeriod === 'month') return "This Month (" + new Date().toLocaleString('default', { month: 'long', year: 'numeric' }) + ")";
+            if (reportStaffPeriod === 'year') return "Current Year (" + new Date().getFullYear() + ")";
+            if (reportStaffPeriod === 'all') return "All-Time Full Company History";
+            if (reportStaffPeriod === 'month_picker' && reportStaffSelectedMonth) {
+                try {
+                    const [py, pm] = reportStaffSelectedMonth.split('-');
+                    const d = new Date(parseInt(py, 10), parseInt(pm, 10) - 1, 1);
+                    return d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                } catch(e) { return reportStaffSelectedMonth; }
+            }
+            if (reportStaffPeriod === 'custom' && reportStaffStartDate && reportStaffEndDate) {
+                return `${formatDisplayDate(reportStaffStartDate)} to ${formatDisplayDate(reportStaffEndDate)}`;
+            }
+            return "Selected Period";
+        }
+
+        function renderComprehensiveStaffReport() {
+            const container = document.getElementById('reportContent');
+            if (!container || !currentOwner) return;
+
+            const employees = (currentOwner.employees || []).filter(e => e && e.isActive !== false);
+            const approvedWork = (currentOwner.workEntries || []).filter(w => w && w.approvalStatus === 'approved');
+            const payments = currentOwner.paymentRecords || [];
+            const attendance = currentOwner.attendance || [];
+            const periodTitle = getReportStaffPeriodTitle();
+
+            // Calculate metrics for each staff in this period
+            let gTasks = 0, gRev = 0, gComm = 0, gPrintScan = 0, gNetProfit = 0, gPayouts = 0, gPending = 0;
+
+            const staffRowsData = employees.map(emp => {
+                // 1. Work entries in this period
+                const empWork = approvedWork.filter(w => 
+                    isRecordForStaff(w, emp) && 
+                    isDateInPeriod(w.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+                );
+
+                const tasks = empWork.length;
+                const rev = empWork.reduce((s, w) => s + (parseFloat(w.customerPrice) || 0), 0);
+                const comm = empWork.reduce((s, w) => s + (parseFloat(w.employeePayment) || 0), 0);
+                const printScan = empWork.reduce((s, w) => s + (parseFloat(w.printCost) || 0) + (parseFloat(w.scanCost) || 0), 0);
+                const netProfit = rev - comm - printScan;
+                const margin = rev > 0 ? ((netProfit / rev) * 100).toFixed(1) : '0.0';
+
+                // 2. Attendance / Shifts in this period
+                const empAtt = attendance.filter(a => 
+                    isRecordForStaff(a, emp) && 
+                    isDateInPeriod(a.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+                );
+                const daysWorked = empAtt.length;
+
+                // 3. Payouts received in this period
+                const empPaid = payments.filter(p => 
+                    isRecordForStaff(p, emp) && 
+                    isDateInPeriod(p.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+                ).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+
+                // 4. Current all-time pending wallet
+                const pendingWallet = getEmployeeWalletBalance(emp.id);
+
+                // Accumulate grand totals
+                gTasks += tasks;
+                gRev += rev;
+                gComm += comm;
+                gPrintScan += printScan;
+                gNetProfit += netProfit;
+                gPayouts += empPaid;
+                gPending += pendingWallet;
+
+                return {
+                    emp,
+                    tasks,
+                    rev,
+                    comm,
+                    printScan,
+                    netProfit,
+                    margin,
+                    daysWorked,
+                    empPaid,
+                    pendingWallet,
+                    empWork,
+                    empAtt
+                };
+            });
+
+            const overallMargin = gRev > 0 ? ((gNetProfit / gRev) * 100).toFixed(1) : '0.0';
+
+            container.innerHTML = `
+                <div style="margin-top:14px;">
+                    <!-- Filter Controls & Export Buttons Toolbar -->
+                    <div style="background:var(--bg-body);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">Period:</span>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'today' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('today')">📆 Today</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'month' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('month')">📅 This Month</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'year' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('year')">📈 This Year</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'all' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('all')">📋 All Time</button>
+                            <div style="display:inline-flex;align-items:center;gap:4px;">
+                                <input type="month" onchange="applyReportStaffMonth(this.value)" style="padding:2px 8px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;" title="Select any month">
+                            </div>
+                            <div style="display:inline-flex;align-items:center;gap:4px;">
+                                <input type="date" id="repStaffStart" value="${reportStaffStartDate}" style="width:120px;padding:2px 6px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;">
+                                <span style="font-size:10px;color:var(--text-secondary);">to</span>
+                                <input type="date" id="repStaffEnd" value="${reportStaffEndDate}" style="width:120px;padding:2px 6px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;">
+                                <button class="btn btn-primary btn-xs" onclick="applyReportStaffRange()" title="Filter range"><i class="fas fa-check"></i></button>
+                                <button class="btn btn-secondary btn-xs" onclick="clearReportStaffRange()" title="Reset"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <button class="btn btn-xs btn-success" onclick="exportStaffReportCSV()" title="Download Excel/CSV Report">
+                                <i class="fas fa-file-excel"></i> Export CSV
+                            </button>
+                            <button class="btn btn-xs btn-info" onclick="printReportSection()" title="Print this report">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Report Title & Summary Badges -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                        <h4 style="font-size:14px;color:var(--text-primary);margin:0;">
+                            <i class="fas fa-user-check" style="color:var(--secondary);"></i> Staff Income, Productivity &amp; Net Shop Profit Report — <strong>${periodTitle}</strong>
+                        </h4>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <span class="badge badge-success">Total Collections: ₹${gRev.toFixed(2)}</span>
+                            <span class="badge badge-warning" style="background:#fef3c7;color:#92400e;">Staff Pay: ₹${gComm.toFixed(2)}</span>
+                            <span class="badge badge-info">Net Shop Profit: ₹${gNetProfit.toFixed(2)} (${overallMargin}%)</span>
+                        </div>
+                    </div>
+
+                    <!-- Comprehensive Master Table with ALL Details -->
+                    <div class="table-wrap">
+                        <table class="data-table" id="comprehensiveStaffReportTable">
+                            <thead>
+                                <tr>
+                                    <th>Staff Member</th>
+                                    <th>Attendance</th>
+                                    <th>Tasks Done</th>
+                                    <th>Gross Revenue</th>
+                                    <th>Staff Income (Comm)</th>
+                                    <th>Print/Scan Cost</th>
+                                    <th>Net Shop Profit</th>
+                                    <th>Margin %</th>
+                                    <th>Payouts Paid</th>
+                                    <th>Pending Wallet</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${staffRowsData.map(r => `
+                                    <tr>
+                                        <td>
+                                            <div style="display:flex;align-items:center;gap:8px;">
+                                                <div style="width:30px;height:30px;border-radius:50%;background:var(--secondary);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;overflow:hidden;flex-shrink:0;">
+                                                    ${r.emp.photoData ? `<img src="${r.emp.photoData}" style="width:100%;height:100%;object-fit:cover;">` : r.emp.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <strong>${r.emp.name}</strong>
+                                                    <div style="font-size:10px;color:var(--text-secondary);">${r.emp.designation || 'Staff'} • ${r.emp.department || 'General'}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge ${r.daysWorked > 0 ? 'badge-success' : 'badge-secondary'}" style="font-size:11px;">
+                                                ${r.daysWorked} Days Present
+                                            </span>
+                                        </td>
+                                        <td><span class="badge badge-info" style="font-weight:700;">${r.tasks} tasks</span></td>
+                                        <td><strong style="color:var(--text-primary);">₹${r.rev.toFixed(2)}</strong></td>
+                                        <td><strong style="color:#16a34a;font-size:13px;">₹${r.comm.toFixed(2)}</strong></td>
+                                        <td><span style="color:var(--text-light);font-size:11px;">₹${r.printScan.toFixed(2)}</span></td>
+                                        <td><strong style="color:${r.netProfit >= 0 ? '#16a34a' : '#dc2626'};font-size:13px;">₹${r.netProfit.toFixed(2)}</strong></td>
+                                        <td><span class="badge badge-info">${r.margin}%</span></td>
+                                        <td><span style="color:#7c3aed;font-weight:600;">₹${r.empPaid.toFixed(2)}</span></td>
+                                        <td>
+                                            <span style="font-weight:800;color:${r.pendingWallet > 0 ? '#d97706' : '#16a34a'};">
+                                                ₹${r.pendingWallet.toFixed(2)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-primary btn-xs" onclick="openStaffDetailModal('${r.emp.id}')" title="See full list of services and work entries for ${r.emp.name}">
+                                                <i class="fas fa-search-plus"></i> Breakdown
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('') || '<tr><td colspan="11" class="empty-state">No staff members registered</td></tr>'}
+                            </tbody>
+                            <tfoot>
+                                <tr style="background:rgba(44,159,110,0.12);font-weight:800;font-size:13px;">
+                                    <td>TOTAL COMPANY</td>
+                                    <td>-</td>
+                                    <td>${gTasks} tasks</td>
+                                    <td style="color:var(--text-primary);">₹${gRev.toFixed(2)}</td>
+                                    <td style="color:#16a34a;">₹${gComm.toFixed(2)}</td>
+                                    <td style="color:var(--text-light);">₹${gPrintScan.toFixed(2)}</td>
+                                    <td style="color:#16a34a;">₹${gNetProfit.toFixed(2)}</td>
+                                    <td>${overallMargin}%</td>
+                                    <td style="color:#7c3aed;">₹${gPayouts.toFixed(2)}</td>
+                                    <td style="color:${gPending > 0 ? '#d97706' : '#16a34a'};">₹${gPending.toFixed(2)}</td>
+                                    <td>-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // =============================================
+        // STAFF BREAKDOWN DRILL-DOWN MODAL
+        // =============================================
+        function openStaffDetailModal(empId) {
+            const emp = (currentOwner.employees || []).find(e => String(e.id) === String(empId));
+            if (!emp) return showToast('❌ Staff member not found', 'error');
+
+            const modal = document.getElementById('staffDetailReportModal');
+            const titleEl = document.getElementById('staffDetailModalTitle');
+            const contentEl = document.getElementById('staffDetailModalContent');
+            if (!modal || !contentEl) return;
+
+            const periodTitle = getReportStaffPeriodTitle();
+            if (titleEl) {
+                titleEl.innerHTML = `<i class="fas fa-user-check" style="color:var(--secondary);"></i> ${emp.name} — Detailed Performance Breakdown (${periodTitle})`;
+            }
+
+            // Filter approved work entries for this staff in this period
+            const workList = (currentOwner.workEntries || []).filter(w => 
+                w && w.approvalStatus === 'approved' &&
+                isRecordForStaff(w, emp) &&
+                isDateInPeriod(w.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+            );
+
+            // Group by Service Name
+            const serviceMap = new Map();
+            workList.forEach(w => {
+                const sName = (w.workName || 'Other').trim().toUpperCase();
+                if (!serviceMap.has(sName)) {
+                    serviceMap.set(sName, { count: 0, revenue: 0, comm: 0, printCost: 0, scanCost: 0 });
+                }
+                const item = serviceMap.get(sName);
+                item.count++;
+                item.revenue += parseFloat(w.customerPrice) || 0;
+                item.comm += parseFloat(w.employeePayment) || 0;
+                item.printCost += parseFloat(w.printCost) || 0;
+                item.scanCost += parseFloat(w.scanCost) || 0;
+            });
+
+            const serviceRows = Array.from(serviceMap.entries()).sort((a, b) => b[1].count - a[1].count);
+
+            // Attendance in this period
+            const attList = (currentOwner.attendance || []).filter(a => 
+                a && isRecordForStaff(a, emp) &&
+                isDateInPeriod(a.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+            ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+            const totalRev = workList.reduce((s, w) => s + (parseFloat(w.customerPrice) || 0), 0);
+            const totalComm = workList.reduce((s, w) => s + (parseFloat(w.employeePayment) || 0), 0);
+            const totalNet = totalRev - totalComm;
+            const currentWallet = getEmployeeWalletBalance(emp.id);
+
+            contentEl.innerHTML = `
+                <!-- Staff Profile Header -->
+                <div style="background:var(--bg-body);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:52px;height:52px;border-radius:50%;background:var(--secondary);color:white;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;overflow:hidden;flex-shrink:0;">
+                            ${emp.photoData ? `<img src="${emp.photoData}" style="width:100%;height:100%;object-fit:cover;">` : emp.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div style="font-size:16px;font-weight:800;color:var(--text-primary);">${emp.name}</div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+                                📧 ${emp.email} | 📱 +91 ${getCleanPhone(emp.mobile) || 'No Mobile'} | Role: ${emp.designation || 'Staff'} (${emp.department || 'General'})
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <span class="badge badge-success" style="font-size:12px;padding:6px 12px;">Earned: ₹${totalComm.toFixed(2)}</span>
+                        <span class="badge badge-info" style="font-size:12px;padding:6px 12px;">Revenue: ₹${totalRev.toFixed(2)}</span>
+                        <span class="badge ${currentWallet > 0 ? 'badge-warning' : 'badge-success'}" style="font-size:12px;padding:6px 12px;">
+                            Wallet Due: ₹${currentWallet.toFixed(2)}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 1. Service-Wise Catalog Breakdown Table -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">
+                    <i class="fas fa-cogs" style="color:var(--secondary);"></i> 1. Services Performed in this Period (${serviceRows.length} Service Types)
+                </h4>
+                <div class="table-wrap" style="margin-bottom:18px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Service Name</th>
+                                <th>Count (Qty)</th>
+                                <th>Customer Price (Rev)</th>
+                                <th>Staff Commission</th>
+                                <th>Paper Cost</th>
+                                <th>Shop Net Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${serviceRows.map(([name, s]) => {
+                                const cost = s.printCost + s.scanCost;
+                                const profit = s.revenue - s.comm - cost;
+                                return `
+                                    <tr>
+                                        <td><strong>${name}</strong></td>
+                                        <td><span class="badge badge-info">${s.count}</span></td>
+                                        <td>₹${s.revenue.toFixed(2)}</td>
+                                        <td><strong style="color:#16a34a;">₹${s.comm.toFixed(2)}</strong></td>
+                                        <td>₹${cost.toFixed(2)}</td>
+                                        <td><strong style="color:${profit >= 0 ? '#16a34a' : '#dc2626'};">₹${profit.toFixed(2)}</strong></td>
+                                    </tr>
+                                `;
+                            }).join('') || '<tr><td colspan="6" class="empty-state">No service entries recorded in this period</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 2. Detailed Work Submissions Log -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">
+                    <i class="fas fa-list-alt" style="color:var(--secondary);"></i> 2. Individual Work Logs (${workList.length} Entries)
+                </h4>
+                <div class="table-wrap" style="max-height:260px;overflow-y:auto;margin-bottom:18px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date &amp; Time</th>
+                                <th>Customer Name</th>
+                                <th>Customer Phone</th>
+                                <th>Service Done</th>
+                                <th>Payment Received</th>
+                                <th>Staff Pay</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${workList.map(w => `
+                                <tr>
+                                    <td>${formatDisplayDate(w.date)} <small style="color:var(--text-light);">${w.time || ''}</small></td>
+                                    <td><strong>${w.customerName || '-'}</strong></td>
+                                    <td>${w.customerPhone ? '+91 ' + w.customerPhone : '-'}</td>
+                                    <td>${w.workName}</td>
+                                    <td>₹${(parseFloat(w.customerPrice) || 0).toFixed(2)}</td>
+                                    <td><strong style="color:#16a34a;">₹${(parseFloat(w.employeePayment) || 0).toFixed(2)}</strong></td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="6" class="empty-state">No work logs in this period</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 3. Attendance & Shift Log in this Period -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">
+                    <i class="fas fa-clock" style="color:var(--secondary);"></i> 3. Attendance Logs in this Period (${attList.length} Shifts)
+                </h4>
+                <div class="table-wrap" style="max-height:220px;overflow-y:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${attList.map(a => {
+                                const dur = a.checkOut ? calculateShiftDuration(a.checkIn, a.checkOut) : '<span style="color:#f59e0b;">In Progress</span>';
+                                return `
+                                    <tr>
+                                        <td><strong>${formatDisplayDate(a.date)}</strong></td>
+                                        <td><span style="color:#16a34a;font-weight:600;"><i class="fas fa-sign-in-alt"></i> ${formatCleanTime(a.checkIn) || '-'}</span></td>
+                                        <td><span style="color:#dc2626;font-weight:600;"><i class="fas fa-sign-out-alt"></i> ${formatCleanTime(a.checkOut) || '-'}</span></td>
+                                        <td>${dur}</td>
+                                        <td><span class="badge ${a.checkOut ? 'badge-success' : 'badge-warning'}">${a.checkOut ? 'Completed' : 'Active'}</span></td>
+                                    </tr>
+                                `;
+                            }).join('') || '<tr><td colspan="5" class="empty-state">No attendance logs in this period</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                    <button class="btn btn-secondary" onclick="closeStaffDetailModal()"><i class="fas fa-times"></i> Close</button>
+                </div>
+            `;
+
+            modal.classList.add('show');
+        }
+
+        function closeStaffDetailModal() {
+            const modal = document.getElementById('staffDetailReportModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        function exportStaffReportCSV() {
+            if (!currentOwner) return;
+            const employees = (currentOwner.employees || []).filter(e => e && e.isActive !== false);
+            const approvedWork = (currentOwner.workEntries || []).filter(w => w && w.approvalStatus === 'approved');
+            const payments = currentOwner.paymentRecords || [];
+            const attendance = currentOwner.attendance || [];
+
+            let csv = "Staff Name,Email,Mobile,Designation,Department,Days Present,Tasks Completed,Gross Revenue (INR),Staff Commission (INR),Paper Cost (INR),Net Shop Profit (INR),Margin %,Payouts Received (INR),Pending Wallet (INR)\n";
+
+            employees.forEach(emp => {
+                const empWork = approvedWork.filter(w => 
+                    isRecordForStaff(w, emp) && 
+                    isDateInPeriod(w.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+                );
+                const tasks = empWork.length;
+                const rev = empWork.reduce((s, w) => s + (parseFloat(w.customerPrice) || 0), 0);
+                const comm = empWork.reduce((s, w) => s + (parseFloat(w.employeePayment) || 0), 0);
+                const printScan = empWork.reduce((s, w) => s + (parseFloat(w.printCost) || 0) + (parseFloat(w.scanCost) || 0), 0);
+                const netProfit = rev - comm - printScan;
+                const margin = rev > 0 ? ((netProfit / rev) * 100).toFixed(1) : '0.0';
+
+                const empAtt = attendance.filter(a => 
+                    isRecordForStaff(a, emp) && 
+                    isDateInPeriod(a.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+                );
+                const daysWorked = empAtt.length;
+
+                const empPaid = payments.filter(p => 
+                    isRecordForStaff(p, emp) && 
+                    isDateInPeriod(p.date, reportStaffPeriod, reportStaffStartDate, reportStaffEndDate, reportStaffSelectedMonth)
+                ).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+
+                const pendingWallet = getEmployeeWalletBalance(emp.id);
+
+                csv += `"${emp.name}","${emp.email}","+91 ${getCleanPhone(emp.mobile)}","${emp.designation || 'Staff'}","${emp.department || 'General'}",${daysWorked},${tasks},${rev.toFixed(2)},${comm.toFixed(2)},${printScan.toFixed(2)},${netProfit.toFixed(2)},${margin}%,${empPaid.toFixed(2)},${pendingWallet.toFixed(2)}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Staff_Performance_Report_${reportStaffPeriod}_${getTodayStr()}.csv`;
+            link.click();
+            showToast('✅ Detailed Staff Report exported to CSV!', 'success');
+        }
+
+        function printReportSection() {
+            window.print();
+        }
     </script>
 </body>
 
