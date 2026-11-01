@@ -3469,11 +3469,34 @@
                         <span class="badge badge-info" id="employeeCountDisplay">Total: 0</span>
                     </div>
                 </div>
-                <div class="filter-bar">
-                    <button class="filter-btn active" onclick="filterEmployees('all')">📋 All</button>
+                <!-- Staff Status Filter (All, Active, Inactive) -->
+                <div class="filter-bar" style="margin-bottom:8px;">
+                    <button class="filter-btn active" onclick="filterEmployees('all')">👥 All Staff</button>
                     <button class="filter-btn" onclick="filterEmployees('active')">🟢 Active</button>
                     <button class="filter-btn" onclick="filterEmployees('inactive')">🟡 Inactive</button>
                 </div>
+
+                <!-- Variable Earnings Period Filter (Days, Month, Years, Custom) -->
+                <div class="filter-bar" style="background:rgba(44,159,110,0.06);border:1px solid rgba(44,159,110,0.2);border-radius:var(--radius-sm);padding:8px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:4px;">
+                        <i class="fas fa-coins" style="color:#f59e0b;"></i> Show Earnings For:
+                    </span>
+                    <button class="filter-btn staff-period-btn active" data-staffperiod="today" onclick="setStaffEarningPeriod('today')">📆 Today</button>
+                    <button class="filter-btn staff-period-btn" data-staffperiod="month" onclick="setStaffEarningPeriod('month')">📅 This Month</button>
+                    <button class="filter-btn staff-period-btn" data-staffperiod="year" onclick="setStaffEarningPeriod('year')">📈 This Year</button>
+                    <button class="filter-btn staff-period-btn" data-staffperiod="all" onclick="setStaffEarningPeriod('all')">📋 All Time</button>
+                    <div style="margin-left:auto;display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                        <input type="date" id="staffFilterStartDate" style="width:130px;padding:4px 8px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;">
+                        <span style="font-size:11px;color:var(--text-secondary);">to</span>
+                        <input type="date" id="staffFilterEndDate" style="width:130px;padding:4px 8px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;">
+                        <button class="btn btn-primary btn-xs" onclick="applyStaffDateRangeFilter()" title="Filter by date range"><i class="fas fa-check"></i> Filter</button>
+                        <button class="btn btn-secondary btn-xs" onclick="clearStaffDateRangeFilter()" title="Reset to Today"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+
+                <!-- Team Earnings Overview Metrics Strip -->
+                <div id="staffEarningsSummaryStrip" style="margin-bottom:14px;"></div>
+
                 <div id="ownerEmployeeList"></div>
             </div>
 
@@ -3907,6 +3930,9 @@
                         Leave</div>
                 </div>
             </div>
+
+            <!-- Quick Shift Check-In Banner for Staff -->
+            <div id="staffHeroShiftBanner" style="margin-bottom:14px;"></div>
 
             <!-- Staff Work Entry Form -->
             <div class="card" id="empAddWork">
@@ -5678,6 +5704,7 @@
             if (cloudData.paymentRecords && Array.isArray(cloudData.paymentRecords)) currentOwner.paymentRecords = cloudData.paymentRecords;
             if (cloudData.paymentRequests && Array.isArray(cloudData.paymentRequests)) currentOwner.paymentRequests = cloudData.paymentRequests;
             if (cloudData.attendance && Array.isArray(cloudData.attendance)) {
+                const localAtt = currentOwner.attendance || [];
                 const attMap = new Map();
                 cloudData.attendance.forEach(a => {
                     if (!a) return;
@@ -5704,6 +5731,22 @@
                         }
                     }
                 });
+
+                // Preserve unsynced local records (especially newly recorded staff check-ins)
+                localAtt.forEach(a => {
+                    if (!a) return;
+                    if (typeof recentlyDeletedAttendanceIds !== 'undefined' && recentlyDeletedAttendanceIds.has(String(a.id || ''))) return;
+                    const key = `${String(a.employeeId).trim()}_${getNormalizedDateStr(a.date)}`;
+                    if (!attMap.has(key)) {
+                        attMap.set(key, a);
+                    } else {
+                        const cloudRec = attMap.get(key);
+                        if (a.checkOut && !cloudRec.checkOut) {
+                            attMap.set(key, a);
+                        }
+                    }
+                });
+
                 currentOwner.attendance = Array.from(attMap.values());
             }
             if (cloudData.leaveRequests && Array.isArray(cloudData.leaveRequests)) currentOwner.leaveRequests = cloudData.leaveRequests;
@@ -7739,13 +7782,99 @@
             }
         }
 
+        // =============================================
+        // EMPLOYEE MANAGEMENT LOGIC & VARIABLE EARNINGS
+        // =============================================
         let currentEmpStatusFilter = 'all';
+        let currentStaffPeriod = 'today';
+        let staffCustomStartDate = '';
+        let staffCustomEndDate = '';
 
         function filterEmployees(status) {
             currentEmpStatusFilter = status;
-            document.querySelectorAll('#employeesSection .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#employeesSection .filter-bar:first-of-type .filter-btn').forEach(b => b.classList.remove('active'));
             if (window.event && window.event.target) window.event.target.classList.add('active');
             renderEmployeeList();
+        }
+
+        function setStaffEarningPeriod(period) {
+            currentStaffPeriod = period;
+            staffCustomStartDate = '';
+            staffCustomEndDate = '';
+            document.querySelectorAll('#employeesSection .staff-period-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`#employeesSection .staff-period-btn[data-staffperiod="${period}"]`)?.classList.add('active');
+            renderEmployeeList();
+        }
+
+        function applyStaffDateRangeFilter() {
+            const start = document.getElementById('staffFilterStartDate')?.value;
+            const end = document.getElementById('staffFilterEndDate')?.value;
+            if (!start || !end) return showToast('⚠️ Select both start and end dates', 'warning');
+            if (start > end) return showToast('⚠️ Start date cannot be after end date', 'warning');
+            currentStaffPeriod = 'custom';
+            staffCustomStartDate = start;
+            staffCustomEndDate = end;
+            document.querySelectorAll('#employeesSection .staff-period-btn').forEach(b => b.classList.remove('active'));
+            renderEmployeeList();
+            showToast(`📆 Filtered staff earnings: ${formatDisplayDate(start)} to ${formatDisplayDate(end)}`, 'info');
+        }
+
+        function clearStaffDateRangeFilter() {
+            if (document.getElementById('staffFilterStartDate')) document.getElementById('staffFilterStartDate').value = '';
+            if (document.getElementById('staffFilterEndDate')) document.getElementById('staffFilterEndDate').value = '';
+            setStaffEarningPeriod('today');
+        }
+
+        function isDateInPeriod(rawDate, period, startDate, endDate) {
+            const norm = getNormalizedDateStr(rawDate);
+            if (!norm) return false;
+            const todayStr = getTodayStr();
+
+            if (period === 'today') {
+                return norm === todayStr;
+            }
+            if (period === 'all') {
+                return true;
+            }
+            if (period === 'custom' && startDate && endDate) {
+                return norm >= startDate && norm <= endDate;
+            }
+
+            const parts = norm.split('-');
+            if (parts.length !== 3) return false;
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth() + 1;
+
+            if (period === 'month') {
+                return y === curY && m === curM;
+            }
+            if (period === 'year') {
+                return y === curY;
+            }
+            return true;
+        }
+
+        function getStaffPeriodLabel(period) {
+            if (period === 'today') return "Today (" + formatDisplayDate(getTodayStr()) + ")";
+            if (period === 'month') return "This Month (" + new Date().toLocaleString('default', { month: 'short', year: 'numeric' }) + ")";
+            if (period === 'year') return "This Year (" + new Date().getFullYear() + ")";
+            if (period === 'all') return "All Time";
+            if (period === 'custom' && staffCustomStartDate && staffCustomEndDate) {
+                return `${formatDisplayDate(staffCustomStartDate)} to ${formatDisplayDate(staffCustomEndDate)}`;
+            }
+            return "Selected Period";
+        }
+
+        function quickPayStaff(empId, balance) {
+            const empSelect = document.getElementById('paymentEmpSelect');
+            const amtInp = document.getElementById('paymentAmount');
+            if (empSelect) empSelect.value = empId;
+            if (amtInp) amtInp.value = balance > 0 ? balance.toFixed(0) : '';
+            scrollToSection('paymentsSection');
+            showToast(`💰 Payout form prepared for selected staff member`, 'info');
         }
 
         function renderEmployeeList() {
@@ -7756,46 +7885,177 @@
                 list = list.filter(e => e.isActive === false);
             }
 
-            document.getElementById('employeeCountDisplay').textContent = 'Total: ' + list.length;
-            document.getElementById('ownerEmployeeList').innerHTML = list.map(e => {
+            const countEl = document.getElementById('employeeCountDisplay');
+            if (countEl) countEl.textContent = 'Total: ' + list.length;
+
+            const periodLabel = getStaffPeriodLabel(currentStaffPeriod);
+            const todayStr = getTodayStr();
+
+            let teamTotalEarned = 0;
+            let teamTotalRevenue = 0;
+            let teamTotalTasks = 0;
+            let teamTotalPayouts = 0;
+            let teamTotalPendingWallet = 0;
+
+            // Render individual staff cards with earnings & performance in selected period
+            const cardsHtml = list.map(e => {
                 const cleanPhone = getCleanPhone(e.mobile);
                 const hasValidPhone = cleanPhone.length === 10;
+
+                // 1. Approved work entries for this staff in selected period
+                const empWork = (currentOwner.workEntries || []).filter(w => {
+                    if (!isRecordForStaff(w, e) && String(w.employeeId).trim() !== String(e.id).trim()) return false;
+                    if (w.approvalStatus !== 'approved') return false;
+                    return isDateInPeriod(w.date, currentStaffPeriod, staffCustomStartDate, staffCustomEndDate);
+                });
+
+                const earned = empWork.reduce((sum, w) => sum + (parseFloat(w.employeePayment) || 0), 0);
+                const revenue = empWork.reduce((sum, w) => sum + (parseFloat(w.customerPrice) || 0), 0);
+                const taskCount = empWork.length;
+
+                // 2. Payouts received by this staff in selected period
+                const empPayments = (currentOwner.paymentRecords || []).filter(p => {
+                    if (!isRecordForStaff(p, e) && String(p.employeeId).trim() !== String(e.id).trim()) return false;
+                    return isDateInPeriod(p.date, currentStaffPeriod, staffCustomStartDate, staffCustomEndDate);
+                });
+                const payouts = empPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
+                // 3. Current wallet balance (total approved commission minus total payouts)
+                const walletBalance = getEmployeeWalletBalance(e.id);
+
+                // Accumulate team totals
+                teamTotalEarned += earned;
+                teamTotalRevenue += revenue;
+                teamTotalTasks += taskCount;
+                teamTotalPayouts += payouts;
+                teamTotalPendingWallet += walletBalance;
+
+                // 4. Today's attendance status
+                const todayAtt = (currentOwner.attendance || []).find(a => 
+                    (isRecordForStaff(a, e) || String(a.employeeId).trim() === String(e.id).trim()) && 
+                    getNormalizedDateStr(a.date) === todayStr
+                );
+
+                let attBadge = '<span class="badge badge-danger" style="font-size:10px;padding:3px 8px;"><i class="fas fa-times-circle"></i> Not Checked In</span>';
+                if (todayAtt) {
+                    if (!todayAtt.checkOut) {
+                        attBadge = `<span class="badge badge-success" style="font-size:10px;padding:3px 8px;"><i class="fas fa-play-circle"></i> In at ${formatCleanTime(todayAtt.checkIn)}</span>`;
+                    } else {
+                        const dur = calculateShiftDuration(todayAtt.checkIn, todayAtt.checkOut);
+                        attBadge = `<span class="badge badge-info" style="font-size:10px;padding:3px 8px;"><i class="fas fa-check-circle"></i> Completed (${dur})</span>`;
+                    }
+                }
+
                 return `
-                <div class="employee-card">
+                <div class="employee-card" style="border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px;background:var(--bg-card);box-shadow:var(--shadow-sm);transition:var(--transition);">
+                    <!-- Top Info Row -->
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
                         <div style="display:flex;gap:12px;align-items:center;">
-                            <div class="avatar">${e.photoData ? `<img src="${e.photoData}" alt="${e.name}">` : e.name.charAt(0)}</div>
+                            <div class="avatar" style="width:46px;height:46px;border-radius:50%;background:var(--secondary);color:white;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;overflow:hidden;flex-shrink:0;">
+                                ${e.photoData ? `<img src="${e.photoData}" alt="${e.name}">` : e.name.charAt(0)}
+                            </div>
                             <div>
-                                <strong style="font-size:15px;">${e.name}</strong>
-                                <div style="font-size:11px;color:var(--text-secondary);">
+                                <strong style="font-size:15px;color:var(--text-primary);">${e.name}</strong>
+                                <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">
                                     📧 ${e.email} | 📱 ${hasValidPhone ? `<span style="color:#16a34a;font-weight:700;">+91 ${cleanPhone}</span>` : '<span style="color:#dc2626;font-weight:600;">No 10-digit Mobile</span>'}
                                 </div>
-                                <div style="font-size:10px;color:var(--text-light);">${e.designation || 'Staff'} (${e.department || 'General'})</div>
+                                <div style="font-size:11px;color:var(--text-light);margin-top:2px;">
+                                    ${e.designation || 'Staff'} • ${e.department || 'General'}
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Action Buttons -->
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <button class="btn btn-primary btn-xs" onclick="quickPayStaff('${e.id}', ${walletBalance})" style="padding:4px 10px;font-weight:700;" title="Record payout for ${e.name}">
+                                <i class="fas fa-hand-holding-usd"></i> Pay Staff (₹${walletBalance.toFixed(0)})
+                            </button>
                             ${hasValidPhone ? `
-                                <button class="btn btn-success btn-xs" onclick="sendWhatsAppToStaff('${e.id}')" title="Chat on WhatsApp">
+                                <button class="btn btn-success btn-xs" onclick="sendWhatsAppToStaff('${e.id}')" title="Chat on WhatsApp" style="padding:4px 8px;">
                                     <i class="fab fa-whatsapp"></i> WhatsApp
                                 </button>
                             ` : ''}
-                            <button class="btn btn-secondary btn-xs" onclick="editStaffMobile('${e.id}')" title="Save / Update Mobile Number">
+                            <button class="btn btn-secondary btn-xs" onclick="editStaffMobile('${e.id}')" title="Save / Update Mobile Number" style="padding:4px 8px;">
                                 <i class="fas fa-phone"></i> ${hasValidPhone ? 'Edit Mobile' : 'Add Mobile'}
                             </button>
-                            <button class="btn btn-warning btn-xs" onclick="resetStaffPasswordByOwner('${e.id}')" title="Reset Staff Login Password">
+                            <button class="btn btn-warning btn-xs" onclick="resetStaffPasswordByOwner('${e.id}')" title="Reset Staff Login Password" style="padding:4px 8px;">
                                 <i class="fas fa-key"></i> Reset Pass
                             </button>
-                            <button class="btn btn-xs ${e.isActive !== false ? 'btn-secondary' : 'btn-success'}" onclick="toggleEmployeeActive('${e.id}')" title="Change status">
+                            <button class="btn btn-xs ${e.isActive !== false ? 'btn-secondary' : 'btn-success'}" onclick="toggleEmployeeActive('${e.id}')" title="Change status" style="padding:4px 8px;">
                                 ${e.isActive !== false ? 'Deactivate' : 'Activate'}
                             </button>
-                            <span class="badge ${e.isActive !== false ? 'badge-success' : 'badge-danger'}">
+                            <span class="badge ${e.isActive !== false ? 'badge-success' : 'badge-danger'}" style="font-size:10px;padding:3px 8px;">
                                 ${e.isActive !== false ? '🟢 Active' : '🔴 Inactive'}
                             </span>
                         </div>
                     </div>
+
+                    <!-- Performance & Earnings Summary Box -->
+                    <div style="margin-top:12px;background:var(--bg-body);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px 14px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                            <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">
+                                <i class="fas fa-chart-line" style="color:var(--secondary);"></i> Performance &amp; Earnings (${periodLabel})
+                            </span>
+                            <div>${attBadge}</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;">
+                            <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
+                                <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">💰 Commission Earned</div>
+                                <div style="font-size:16px;font-weight:800;color:#16a34a;margin-top:2px;">₹${earned.toFixed(2)}</div>
+                                <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">${taskCount} services completed</div>
+                            </div>
+                            <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
+                                <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">🏪 Shop Revenue Generated</div>
+                                <div style="font-size:16px;font-weight:800;color:#2563eb;margin-top:2px;">₹${revenue.toFixed(2)}</div>
+                                <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">Customer collections</div>
+                            </div>
+                            <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
+                                <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">💵 Payouts Received</div>
+                                <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-top:2px;">₹${payouts.toFixed(2)}</div>
+                                <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">In ${periodLabel}</div>
+                            </div>
+                            <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;">
+                                <div style="font-size:10px;color:var(--text-light);font-weight:700;text-transform:uppercase;">👛 Pending Wallet</div>
+                                <div style="font-size:16px;font-weight:800;color:${walletBalance > 0 ? '#d97706' : '#16a34a'};margin-top:2px;">₹${walletBalance.toFixed(2)}</div>
+                                <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">${walletBalance > 0 ? '⚠️ Due for payout' : '✅ All clear'}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            `;
+                `;
             }).join('') || '<div class="empty-state">No staff members found</div>';
+
+            const listContainer = document.getElementById('ownerEmployeeList');
+            if (listContainer) listContainer.innerHTML = cardsHtml;
+
+            // Render Team Financial Summary Strip
+            const summaryStrip = document.getElementById('staffEarningsSummaryStrip');
+            if (summaryStrip) {
+                summaryStrip.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;background:rgba(44,159,110,0.08);border:1px solid rgba(44,159,110,0.25);border-radius:var(--radius-sm);padding:12px 16px;">
+                        <div>
+                            <div style="font-size:10px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">👥 Team Size</div>
+                            <div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-top:2px;">${list.length} Members</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">${teamTotalTasks} services in ${periodLabel}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">💰 Total Staff Commissions</div>
+                            <div style="font-size:18px;font-weight:800;color:#16a34a;margin-top:2px;">₹${teamTotalEarned.toFixed(2)}</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Earned in ${periodLabel}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">🏪 Total Customer Revenue</div>
+                            <div style="font-size:18px;font-weight:800;color:#2563eb;margin-top:2px;">₹${teamTotalRevenue.toFixed(2)}</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Generated by team</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">👛 Total Pending Wallets</div>
+                            <div style="font-size:18px;font-weight:800;color:${teamTotalPendingWallet > 0 ? '#d97706' : '#16a34a'};margin-top:2px;">₹${teamTotalPendingWallet.toFixed(2)}</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">${teamTotalPendingWallet > 0 ? 'Unpaid commission balance' : 'All balances settled'}</div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function toggleEmployeeActive(id) {
@@ -8123,6 +8383,7 @@
             filterEmpServiceOptions();
             renderEmployeeView();
             renderEmployeeAttendanceView();
+            updateStaffHeroShiftCard();
             renderEmployeePaymentRequests();
             updateNotificationBadge();
 
@@ -9108,7 +9369,10 @@
             }
 
             if (!currentOwner.attendance) currentOwner.attendance = [];
-            const todayRec = currentOwner.attendance.find(a => a.employeeId === empId && a.date === todayStr);
+            const todayRec = currentOwner.attendance.find(a => 
+                (isRecordForStaff(a, currentEmployee) || String(a.employeeId).trim() === String(empId).trim()) && 
+                getNormalizedDateStr(a.date) === todayStr
+            );
 
             const statusCard = document.getElementById('empAttendanceStatusCard');
             if (statusCard) {
@@ -9135,7 +9399,7 @@
                                 <span class="badge badge-success" style="font-size:12px;padding:4px 10px;">🟢 ACTIVE SHIFT IN PROGRESS</span>
                             </div>
                             <div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-bottom:2px;">
-                                Checked In at: <span style="color:#16a34a;">${todayRec.checkIn}</span>
+                                Checked In at: <span style="color:#16a34a;">${formatCleanTime(todayRec.checkIn)}</span>
                             </div>
                             <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
                                 Have you finished all tasks for the day? End your shift with 1 click.
@@ -9154,7 +9418,7 @@
                                 <span class="badge badge-info" style="font-size:12px;padding:4px 10px;">✅ TODAY'S SHIFT COMPLETED</span>
                             </div>
                             <div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-bottom:4px;">
-                                ${todayRec.checkIn} ➔ ${todayRec.checkOut}
+                                ${formatCleanTime(todayRec.checkIn)} ➔ ${formatCleanTime(todayRec.checkOut)}
                             </div>
                             <div style="font-size:13px;font-weight:700;color:var(--secondary);">
                                 Total Shift Duration: ${dur}
@@ -9168,7 +9432,7 @@
             const empHistoryBody = document.getElementById('empAttendanceHistoryBody');
             if (empHistoryBody) {
                 const myLogs = (currentOwner.attendance || [])
-                    .filter(a => a && a.employeeId === empId)
+                    .filter(a => a && (isRecordForStaff(a, currentEmployee) || String(a.employeeId).trim() === String(empId).trim()))
                     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0) || String(b.id || '').localeCompare(String(a.id || '')))
                     .slice(0, 15);
 
@@ -9180,9 +9444,9 @@
                         const badge = l.checkOut ? '<span class="badge badge-success">Completed</span>' : '<span class="badge badge-warning">Active</span>';
                         return `
                             <tr>
-                                <td><strong>${l.date}</strong></td>
-                                <td><span style="color:#16a34a;font-weight:600;"><i class="fas fa-sign-in-alt"></i> ${l.checkIn || '-'}</span></td>
-                                <td><span style="color:#dc2626;font-weight:600;"><i class="fas fa-sign-out-alt"></i> ${l.checkOut || '-'}</span></td>
+                                <td><strong>${formatDisplayDate(l.date)}</strong></td>
+                                <td><span style="color:#16a34a;font-weight:600;"><i class="fas fa-sign-in-alt"></i> ${formatCleanTime(l.checkIn) || '-'}</span></td>
+                                <td><span style="color:#dc2626;font-weight:600;"><i class="fas fa-sign-out-alt"></i> ${formatCleanTime(l.checkOut) || '-'}</span></td>
                                 <td>${dur}</td>
                                 <td>${badge}</td>
                             </tr>
@@ -9197,25 +9461,47 @@
             const date = getTodayStr();
             const time = getCurrentTime();
             if (!currentOwner.attendance) currentOwner.attendance = [];
-            const existing = currentOwner.attendance.find(a => a.employeeId === currentEmployee.id && a.date === date);
+
+            // Match by staff ID, email, or mobile
+            const existing = currentOwner.attendance.find(a => 
+                (isRecordForStaff(a, currentEmployee) || String(a.employeeId).trim() === String(currentEmployee.id).trim()) && 
+                getNormalizedDateStr(a.date) === date
+            );
             if (existing) {
-                return showToast(`⚠️ You already checked in today at ${existing.checkIn}`, 'warning');
+                return showToast(`⚠️ You already checked in today at ${formatCleanTime(existing.checkIn)}`, 'warning');
             }
-            currentOwner.attendance.push({
+
+            const record = {
                 id: 'att_' + Date.now(),
-                employeeId: currentEmployee.id,
-                employeeName: currentEmployee.name,
+                employeeId: String(currentEmployee.id),
+                employeeName: String(currentEmployee.name || 'Staff'),
+                employeeEmail: String(currentEmployee.email || ''),
+                employeeMobile: String(currentEmployee.mobile || ''),
                 date: date,
                 checkIn: time,
                 checkOut: null,
                 hoursWorked: 0,
                 status: 'Present'
-            });
+            };
+
+            currentOwner.attendance.push(record);
             saveOwners();
             renderEmployeeAttendanceView();
+            updateStaffHeroShiftCard();
             addNotification('⏰ Shift Started', `${currentEmployee.name} checked in at ${time}`, 'attendance');
             showToast(`✅ Checked IN at ${time}! Have a productive shift.`, 'success');
-            if (cloudApiUrl) triggerManualSync();
+
+            // Send immediately to Google Apps Script cloud sheet
+            if (cloudApiUrl) {
+                fetch(cloudApiUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'attendance', attendance: record })
+                }).then(() => {
+                    console.log('✅ Staff check-in synced to Google Sheets');
+                }).catch(err => console.warn('Cloud check-in error:', err));
+            }
         }
 
         function staffSelfCheckOut() {
@@ -9223,21 +9509,94 @@
             const date = getTodayStr();
             const time = getCurrentTime();
             if (!currentOwner.attendance) currentOwner.attendance = [];
-            const existing = currentOwner.attendance.find(a => a.employeeId === currentEmployee.id && a.date === date);
+
+            const existing = currentOwner.attendance.find(a => 
+                (isRecordForStaff(a, currentEmployee) || String(a.employeeId).trim() === String(currentEmployee.id).trim()) && 
+                getNormalizedDateStr(a.date) === date
+            );
             if (!existing) {
                 return showToast('❌ You have not checked in today yet.', 'error');
             }
             if (existing.checkOut) {
-                return showToast(`⚠️ Already checked out at ${existing.checkOut}`, 'info');
+                return showToast(`⚠️ Already checked out at ${formatCleanTime(existing.checkOut)}`, 'info');
             }
+
             existing.checkOut = time;
             existing.hoursWorked = calculateShiftDuration(existing.checkIn, existing.checkOut);
             existing.status = 'Completed';
             saveOwners();
             renderEmployeeAttendanceView();
+            updateStaffHeroShiftCard();
             addNotification('🏁 Shift Ended', `${currentEmployee.name} checked out at ${time} (${existing.hoursWorked})`, 'attendance');
             showToast(`✅ Checked OUT at ${time}! Shift complete (${existing.hoursWorked}).`, 'success');
-            if (cloudApiUrl) triggerManualSync();
+
+            // Send checkOut directly to Google Apps Script
+            if (cloudApiUrl) {
+                fetch(cloudApiUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'attendance', attendance: existing })
+                }).then(() => {
+                    console.log('✅ Staff check-out synced to Google Sheets');
+                }).catch(err => console.warn('Cloud check-out error:', err));
+            }
+        }
+
+        function updateStaffHeroShiftCard() {
+            const banner = document.getElementById('staffHeroShiftBanner');
+            if (!banner || !currentEmployee) return;
+
+            const todayStr = getTodayStr();
+            const todayRec = (currentOwner.attendance || []).find(a => 
+                (isRecordForStaff(a, currentEmployee) || String(a.employeeId).trim() === String(currentEmployee.id).trim()) && 
+                getNormalizedDateStr(a.date) === todayStr
+            );
+
+            if (!todayRec) {
+                // Not Checked In
+                banner.innerHTML = `
+                    <div style="background:rgba(239,68,68,0.06);border:2px dashed #ef4444;border-radius:var(--radius-sm);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <div style="font-size:14px;font-weight:800;color:#dc2626;"><i class="fas fa-door-open"></i> You Have Not Checked In Today</div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Start your work shift now to synchronize your daily commission earnings.</div>
+                        </div>
+                        <button class="btn btn-success" onclick="staffSelfCheckIn()" style="padding:10px 24px;font-size:14px;font-weight:700;">
+                            <i class="fas fa-play"></i> ▶️ CHECK IN (START SHIFT)
+                        </button>
+                    </div>
+                `;
+            } else if (!todayRec.checkOut) {
+                // Active Shift
+                banner.innerHTML = `
+                    <div style="background:rgba(34,197,94,0.08);border:2px solid #22c55e;border-radius:var(--radius-sm);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <div style="font-size:14px;font-weight:800;color:var(--text-primary);">
+                                <span class="badge badge-success" style="font-size:11px;padding:3px 8px;margin-right:6px;">🟢 ACTIVE SHIFT</span>
+                                Checked in at <span style="color:#16a34a;">${formatCleanTime(todayRec.checkIn)}</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Shift in progress. Finished for the day? End shift with 1 click.</div>
+                        </div>
+                        <button class="btn btn-warning" onclick="staffSelfCheckOut()" style="padding:10px 24px;font-size:14px;font-weight:700;background:#f59e0b;color:white;border:none;">
+                            <i class="fas fa-stop"></i> ⏹️ CHECK OUT (END SHIFT)
+                        </button>
+                    </div>
+                `;
+            } else {
+                // Shift Completed
+                const dur = calculateShiftDuration(todayRec.checkIn, todayRec.checkOut);
+                banner.innerHTML = `
+                    <div style="background:rgba(59,130,246,0.08);border:2px solid #3b82f6;border-radius:var(--radius-sm);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <div style="font-size:14px;font-weight:800;color:var(--text-primary);">
+                                <span class="badge badge-info" style="font-size:11px;padding:3px 8px;margin-right:6px;">✅ TODAY'S SHIFT COMPLETED</span>
+                                ${formatCleanTime(todayRec.checkIn)} ➔ ${formatCleanTime(todayRec.checkOut)}
+                            </div>
+                            <div style="font-size:12px;color:var(--secondary);margin-top:2px;font-weight:700;">Total Duration: ${dur}</div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function openEmployeeAttendance() {
