@@ -3483,10 +3483,13 @@
                     <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:4px;">
                         <i class="fas fa-coins" style="color:#f59e0b;"></i> Show Earnings For:
                     </span>
-                    <button class="filter-btn staff-period-btn active" data-staffperiod="today" onclick="setStaffEarningPeriod('today')">📆 Today</button>
+                    <button class="filter-btn staff-period-btn active" data-staffperiod="all" onclick="setStaffEarningPeriod('all')">📋 All Time</button>
                     <button class="filter-btn staff-period-btn" data-staffperiod="month" onclick="setStaffEarningPeriod('month')">📅 This Month</button>
+                    <button class="filter-btn staff-period-btn" data-staffperiod="last_month" onclick="setStaffEarningPeriod('last_month')">📅 Last Month</button>
+                    <button class="filter-btn staff-period-btn" data-staffperiod="30_days" onclick="setStaffEarningPeriod('30_days')">⏳ Past 30 Days</button>
+                    <button class="filter-btn staff-period-btn" data-staffperiod="7_days" onclick="setStaffEarningPeriod('7_days')">⏳ Past 7 Days</button>
+                    <button class="filter-btn staff-period-btn" data-staffperiod="today" onclick="setStaffEarningPeriod('today')">📆 Today</button>
                     <button class="filter-btn staff-period-btn" data-staffperiod="year" onclick="setStaffEarningPeriod('year')">📈 This Year</button>
-                    <button class="filter-btn staff-period-btn" data-staffperiod="all" onclick="setStaffEarningPeriod('all')">📋 All Time</button>
                     <div style="display:inline-flex;align-items:center;gap:4px;margin-left:4px;">
                         <span style="font-size:11px;color:var(--text-secondary);">Month:</span>
                         <input type="month" id="staffFilterMonth" onchange="applyStaffMonthPicker(this.value)" style="padding:3px 8px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;" title="Pick specific month">
@@ -3755,11 +3758,15 @@
 
             <!-- Attendance Management -->
             <div class="card" id="attendanceSection">
-                <div class="card-header">
-                    <h3><i class="fas fa-clock" style="color:var(--secondary);"></i> Staff Daily Attendance &amp; Shift
-                        Management</h3>
-                    <button class="btn btn-secondary btn-sm" onclick="renderAttendanceDashboard()"><i
-                            class="fas fa-sync-alt"></i> Refresh</button>
+                <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                    <h3><i class="fas fa-clock" style="color:var(--secondary);"></i> Staff Daily Attendance &amp; Shift Management</h3>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);cursor:pointer;background:var(--bg-card);padding:5px 12px;border-radius:50px;border:1px solid var(--border-color);" title="When disabled, staff cannot self check-in from their phone; only Owner records attendance at the counter">
+                            <input type="checkbox" id="toggleStaffSelfCheckInCheckbox" onchange="setStaffSelfCheckInPermission(this.checked)">
+                            <span>Staff Mobile Self Check-In</span>
+                        </label>
+                        <button class="btn btn-secondary btn-sm" onclick="renderAttendanceDashboard()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
                 </div>
 
                 <!-- Today's Attendance Counters -->
@@ -7806,11 +7813,51 @@
         // EMPLOYEE MANAGEMENT LOGIC & VARIABLE EARNINGS
         // =============================================
         let currentEmpStatusFilter = 'all';
-        let currentStaffPeriod = 'today';
+        let currentStaffPeriod = 'all';
         let staffCustomStartDate = '';
         let staffCustomEndDate = '';
         let staffSelectedMonth = '';
         let isStaffIncomeHidden = localStorage.getItem('kjr_hide_staff_income') === '1';
+
+        function isStaffSelfCheckInAllowed() {
+            return localStorage.getItem('allowStaffSelfCheckIn') === 'true';
+        }
+
+        function setStaffSelfCheckInPermission(allowed) {
+            localStorage.setItem('allowStaffSelfCheckIn', allowed ? 'true' : 'false');
+            showToast(allowed ? '🟢 Staff can now self check-in on mobile phones' : '🔒 Staff check-in restricted to Store Owner at counter', 'info');
+            renderAttendanceDashboard();
+        }
+
+        function syncStaffFromWorkEntries() {
+            if (!currentOwner) return;
+            if (!currentOwner.employees) currentOwner.employees = [];
+            const entries = currentOwner.workEntries || [];
+            entries.forEach(entry => {
+                if (!entry || !entry.employeeName) return;
+                const empName = String(entry.employeeName).trim();
+                if (!empName) return;
+                const exists = currentOwner.employees.some(e => 
+                    (entry.employeeId && String(e.id).trim() === String(entry.employeeId).trim()) ||
+                    (e.name && e.name.trim().toLowerCase() === empName.toLowerCase())
+                );
+                if (!exists) {
+                    const newEmp = {
+                        id: entry.employeeId || ('emp_' + Date.now() + '_' + Math.floor(Math.random() * 1000)),
+                        name: empName,
+                        email: entry.employeeEmail || (empName.toLowerCase().replace(/[^a-z0-9]/g, '') + '@kjr.com'),
+                        mobile: entry.employeeMobile || '',
+                        department: 'Cyber / Digital Seva',
+                        designation: 'Staff Operator',
+                        isActive: true,
+                        joiningDate: entry.date || getTodayStr(),
+                        photoData: ''
+                    };
+                    currentOwner.employees.push(newEmp);
+                    console.log('✨ Auto-discovered staff from work entry:', empName);
+                }
+            });
+        }
 
         function toggleStaffIncomeVisibility() {
             isStaffIncomeHidden = !isStaffIncomeHidden;
@@ -7879,7 +7926,7 @@
         function clearStaffDateRangeFilter() {
             if (document.getElementById('staffFilterStartDate')) document.getElementById('staffFilterStartDate').value = '';
             if (document.getElementById('staffFilterEndDate')) document.getElementById('staffFilterEndDate').value = '';
-            setStaffEarningPeriod('today');
+            setStaffEarningPeriod('all');
         }
 
         function isDateInPeriod(rawDate, period, startDate, endDate, pickedMonth) {
@@ -7887,11 +7934,11 @@
             if (!norm) return false;
             const todayStr = getTodayStr();
 
-            if (period === 'today') {
-                return norm === todayStr;
-            }
             if (period === 'all') {
                 return true;
+            }
+            if (period === 'today') {
+                return norm === todayStr;
             }
             if (period === 'custom' && startDate && endDate) {
                 return norm >= startDate && norm <= endDate;
@@ -7913,6 +7960,23 @@
             if (period === 'month') {
                 return y === curY && m === curM;
             }
+            if (period === 'last_month') {
+                const lastM = curM === 1 ? 12 : curM - 1;
+                const lastY = curM === 1 ? curY - 1 : curY;
+                return y === lastY && m === lastM;
+            }
+            if (period === '7_days') {
+                const d7 = new Date();
+                d7.setDate(d7.getDate() - 7);
+                const d7Str = getNormalizedDateStr(d7.toISOString());
+                return norm >= d7Str && norm <= todayStr;
+            }
+            if (period === '30_days') {
+                const d30 = new Date();
+                d30.setDate(d30.getDate() - 30);
+                const d30Str = getNormalizedDateStr(d30.toISOString());
+                return norm >= d30Str && norm <= todayStr;
+            }
             if (period === 'year') {
                 return y === curY;
             }
@@ -7920,10 +7984,19 @@
         }
 
         function getStaffPeriodLabel(period) {
-            if (period === 'today') return "Today (" + formatDisplayDate(getTodayStr()) + ")";
-            if (period === 'month') return "This Month (" + new Date().toLocaleString('default', { month: 'short', year: 'numeric' }) + ")";
-            if (period === 'year') return "This Year (" + new Date().getFullYear() + ")";
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth();
             if (period === 'all') return "All Time";
+            if (period === 'today') return "Today (" + formatDisplayDate(getTodayStr()) + ")";
+            if (period === 'month') return "This Month (" + now.toLocaleString('default', { month: 'short', year: 'numeric' }) + ")";
+            if (period === 'last_month') {
+                const lastMonthDate = new Date(curY, curM - 1, 1);
+                return "Last Month (" + lastMonthDate.toLocaleString('default', { month: 'short', year: 'numeric' }) + ")";
+            }
+            if (period === '30_days') return "Past 30 Days";
+            if (period === '7_days') return "Past 7 Days";
+            if (period === 'year') return "This Year (" + curY + ")";
             if (period === 'month_picker' && staffSelectedMonth) {
                 try {
                     const [py, pm] = staffSelectedMonth.split('-');
@@ -7947,6 +8020,7 @@
         }
 
         function renderEmployeeList() {
+            syncStaffFromWorkEntries();
             let list = (currentOwner && currentOwner.employees) ? currentOwner.employees : [];
             if (currentEmpStatusFilter === 'active') {
                 list = list.filter(e => e.isActive !== false);
@@ -9148,6 +9222,12 @@
             if (!currentOwner) return;
             if (!currentOwner.attendance) currentOwner.attendance = [];
 
+            // Auto-sync any staff from work entries
+            syncStaffFromWorkEntries();
+
+            const permCheckbox = document.getElementById('toggleStaffSelfCheckInCheckbox');
+            if (permCheckbox) permCheckbox.checked = isStaffSelfCheckInAllowed();
+
             // Deduplicate staff list by email/phone/ID so no staff member is rendered twice
             const rawStaff = (currentOwner.employees || []).filter(e => e && e.isActive !== false);
             const staffMap = new Map();
@@ -9396,13 +9476,22 @@
         }
 
         let recentlyDeletedAttendanceIds = new Set();
+        try {
+            const storedDel = localStorage.getItem('kjr_deleted_att_ids');
+            if (storedDel) recentlyDeletedAttendanceIds = new Set(JSON.parse(storedDel));
+        } catch (e) {}
 
         function deleteAttendanceRecord(attId) {
             if (!confirm('Are you sure you want to delete this attendance record?')) return;
             recentlyDeletedAttendanceIds.add(String(attId));
+            try {
+                localStorage.setItem('kjr_deleted_att_ids', JSON.stringify(Array.from(recentlyDeletedAttendanceIds)));
+            } catch (e) {}
+
             currentOwner.attendance = (currentOwner.attendance || []).filter(a => String(a.id) !== String(attId));
             saveOwners();
             renderAttendanceDashboard();
+            renderEmployeeList();
             showToast('✅ Attendance record deleted', 'info');
 
             // Send immediate delete command to Google Sheet backend
@@ -9414,6 +9503,7 @@
                     body: JSON.stringify({ action: 'deleteRecord', sheetName: 'Attendance', id: String(attId) })
                 }).then(() => {
                     console.log('✅ Attendance record deleted from cloud sheet:', attId);
+                    triggerManualSync();
                 }).catch(err => console.warn('Cloud delete warning:', err));
             }
         }
@@ -9452,19 +9542,35 @@
             if (statusCard) {
                 if (!todayRec) {
                     // Not Checked In
-                    statusCard.innerHTML = `
-                        <div style="background:rgba(239,68,68,0.06);border:2px dashed #ef4444;border-radius:var(--radius-sm);padding:16px;text-align:center;">
-                            <div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px;">
-                                <i class="fas fa-door-open"></i> You Have Not Checked In Today
+                    if (!isStaffSelfCheckInAllowed()) {
+                        statusCard.innerHTML = `
+                            <div style="background:rgba(59,130,246,0.06);border:1.5px solid rgba(59,130,246,0.3);border-radius:var(--radius-sm);padding:18px;text-align:center;">
+                                <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">
+                                    <i class="fas fa-store-alt" style="color:var(--secondary);"></i> Store Counter Attendance Active
+                                </div>
+                                <p style="font-size:12px;color:var(--text-secondary);max-width:440px;margin:0 auto 10px auto;">
+                                    Shift check-in and check-out are recorded directly by the <strong>Store Owner / Admin</strong> at the shop counter upon your arrival and departure.
+                                </p>
+                                <span class="badge badge-warning" style="font-size:11px;padding:4px 12px;">
+                                    <i class="fas fa-lock"></i> Staff Self Check-In: Restricted to Store Admin
+                                </span>
                             </div>
-                            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
-                                Start your work shift by checking in. Your work logs and commission tracking will be synchronized.
-                            </p>
-                            <button class="btn btn-success" onclick="staffSelfCheckIn()" style="padding:12px 28px;font-size:15px;font-weight:700;justify-content:center;width:100%;max-width:320px;margin:0 auto;">
-                                <i class="fas fa-play"></i> ▶️ CHECK IN (START SHIFT)
-                            </button>
-                        </div>
-                    `;
+                        `;
+                    } else {
+                        statusCard.innerHTML = `
+                            <div style="background:rgba(239,68,68,0.06);border:2px dashed #ef4444;border-radius:var(--radius-sm);padding:16px;text-align:center;">
+                                <div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px;">
+                                    <i class="fas fa-door-open"></i> You Have Not Checked In Today
+                                </div>
+                                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+                                    Start your work shift by checking in. Your work logs and commission tracking will be synchronized.
+                                </p>
+                                <button class="btn btn-success" onclick="staffSelfCheckIn()" style="padding:12px 28px;font-size:15px;font-weight:700;justify-content:center;width:100%;max-width:320px;margin:0 auto;">
+                                    <i class="fas fa-play"></i> ▶️ CHECK IN (START SHIFT)
+                                </button>
+                            </div>
+                        `;
+                    }
                 } else if (!todayRec.checkOut) {
                     // Checked In, Active Shift
                     statusCard.innerHTML = `
@@ -9532,6 +9638,9 @@
 
         function staffSelfCheckIn() {
             if (!currentEmployee) return;
+            if (!isStaffSelfCheckInAllowed()) {
+                return showToast('🔒 Shift attendance is recorded directly by the Store Owner at the counter.', 'warning');
+            }
             const date = getTodayStr();
             const time = getCurrentTime();
             if (!currentOwner.attendance) currentOwner.attendance = [];
@@ -9629,17 +9738,29 @@
 
             if (!todayRec) {
                 // Not Checked In
-                banner.innerHTML = `
-                    <div style="background:rgba(239,68,68,0.06);border:2px dashed #ef4444;border-radius:var(--radius-sm);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                        <div>
-                            <div style="font-size:14px;font-weight:800;color:#dc2626;"><i class="fas fa-door-open"></i> You Have Not Checked In Today</div>
-                            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Start your work shift now to synchronize your daily commission earnings.</div>
+                if (!isStaffSelfCheckInAllowed()) {
+                    banner.innerHTML = `
+                        <div style="background:rgba(59,130,246,0.06);border:1.5px solid rgba(59,130,246,0.3);border-radius:var(--radius-sm);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                            <div>
+                                <div style="font-size:14px;font-weight:800;color:var(--text-primary);"><i class="fas fa-store-alt" style="color:var(--secondary);"></i> Today's Shift: Not Started</div>
+                                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Shift check-in is recorded directly by the Store Owner at the counter.</div>
+                            </div>
+                            <span class="badge badge-warning" style="font-size:11px;padding:6px 14px;"><i class="fas fa-lock"></i> Store Admin Attendance</span>
                         </div>
-                        <button class="btn btn-success" onclick="staffSelfCheckIn()" style="padding:10px 24px;font-size:14px;font-weight:700;">
-                            <i class="fas fa-play"></i> ▶️ CHECK IN (START SHIFT)
-                        </button>
-                    </div>
-                `;
+                    `;
+                } else {
+                    banner.innerHTML = `
+                        <div style="background:rgba(239,68,68,0.06);border:2px dashed #ef4444;border-radius:var(--radius-sm);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                            <div>
+                                <div style="font-size:14px;font-weight:800;color:#dc2626;"><i class="fas fa-door-open"></i> You Have Not Checked In Today</div>
+                                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Start your work shift now to synchronize your daily commission earnings.</div>
+                            </div>
+                            <button class="btn btn-success" onclick="staffSelfCheckIn()" style="padding:10px 24px;font-size:14px;font-weight:700;">
+                                <i class="fas fa-play"></i> ▶️ CHECK IN (START SHIFT)
+                            </button>
+                        </div>
+                    `;
+                }
             } else if (!todayRec.checkOut) {
                 // Active Shift
                 banner.innerHTML = `
@@ -12558,7 +12679,7 @@
 // =============================================
         // COMPREHENSIVE BUSINESS REPORT - STAFF MASTER
         // =============================================
-        let reportStaffPeriod = 'month';
+        let reportStaffPeriod = 'all';
         let reportStaffStartDate = '';
         let reportStaffEndDate = '';
         let reportStaffSelectedMonth = '';
@@ -12601,10 +12722,19 @@
         }
 
         function getReportStaffPeriodTitle() {
-            if (reportStaffPeriod === 'today') return "Today's Performance (" + formatDisplayDate(getTodayStr()) + ")";
-            if (reportStaffPeriod === 'month') return "This Month (" + new Date().toLocaleString('default', { month: 'long', year: 'numeric' }) + ")";
-            if (reportStaffPeriod === 'year') return "Current Year (" + new Date().getFullYear() + ")";
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth();
             if (reportStaffPeriod === 'all') return "All-Time Full Company History";
+            if (reportStaffPeriod === 'today') return "Today's Performance (" + formatDisplayDate(getTodayStr()) + ")";
+            if (reportStaffPeriod === 'month') return "This Month (" + now.toLocaleString('default', { month: 'long', year: 'numeric' }) + ")";
+            if (reportStaffPeriod === 'last_month') {
+                const lastMonthDate = new Date(curY, curM - 1, 1);
+                return "Last Month (" + lastMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' }) + ")";
+            }
+            if (reportStaffPeriod === '30_days') return "Past 30 Days Performance Statement";
+            if (reportStaffPeriod === '7_days') return "Past 7 Days Performance Statement";
+            if (reportStaffPeriod === 'year') return "Current Year (" + curY + ")";
             if (reportStaffPeriod === 'month_picker' && reportStaffSelectedMonth) {
                 try {
                     const [py, pm] = reportStaffSelectedMonth.split('-');
@@ -12694,10 +12824,13 @@
                     <div style="background:var(--bg-body);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                             <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">Period:</span>
-                            <button class="btn btn-xs ${reportStaffPeriod === 'today' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('today')">📆 Today</button>
-                            <button class="btn btn-xs ${reportStaffPeriod === 'month' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('month')">📅 This Month</button>
-                            <button class="btn btn-xs ${reportStaffPeriod === 'year' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('year')">📈 This Year</button>
                             <button class="btn btn-xs ${reportStaffPeriod === 'all' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('all')">📋 All Time</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'month' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('month')">📅 This Month</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'last_month' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('last_month')">📅 Last Month</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === '30_days' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('30_days')">⏳ Past 30 Days</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === '7_days' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('7_days')">⏳ Past 7 Days</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'today' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('today')">📆 Today</button>
+                            <button class="btn btn-xs ${reportStaffPeriod === 'year' ? 'btn-primary' : 'btn-secondary'}" onclick="setReportStaffPeriod('year')">📈 This Year</button>
                             <div style="display:inline-flex;align-items:center;gap:4px;">
                                 <input type="month" onchange="applyReportStaffMonth(this.value)" style="padding:2px 8px;border-radius:50px;border:1px solid var(--border-color);font-size:0.75rem;" title="Select any month">
                             </div>
