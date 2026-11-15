@@ -690,6 +690,77 @@
             background: rgba(44, 159, 110, 0.04);
         }
 
+        .data-table tr.selected-work-row td {
+            background-color: rgba(99, 102, 241, 0.12) !important;
+        }
+
+        .work-bulk-bar {
+            position: sticky;
+            top: 60px;
+            z-index: 85;
+            background: var(--bg-card);
+            border: 1.5px solid #6366f1;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.18);
+            border-radius: var(--radius-sm);
+            padding: 8px 14px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .work-search-box {
+            position: relative;
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .work-search-box input {
+            width: 100%;
+            padding: 7px 12px 7px 32px;
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .work-search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .work-search-box i {
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            font-size: 11px;
+        }
+
+        .work-search-clear {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 11px;
+            padding: 2px;
+        }
+
+        .work-search-clear:hover {
+            color: var(--text-primary);
+        }
+
         .badge {
             padding: 3px 10px;
             border-radius: 50px;
@@ -3382,7 +3453,10 @@
                             <p style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Staff members have submitted completed customer jobs. Review &amp; approve to credit their wallet balance.</p>
                         </div>
                     </div>
-                    <button class="btn btn-warning btn-sm" onclick="scrollToSection('workSection'); setFilter('pending_approval');" style="font-weight:700;"><i class="fas fa-check-circle"></i> Review &amp; Approve Now</button>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn btn-warning btn-sm" onclick="scrollToSection('workSection'); setFilter('pending_approval');" style="font-weight:700;"><i class="fas fa-check-circle"></i> Review &amp; Approve</button>
+                        <button class="btn btn-success btn-sm" onclick="quickApproveAllPending();" style="font-weight:700;"><i class="fas fa-check-double"></i> ⚡ Approve All (<span class="quick-pending-badge">0</span>)</button>
+                    </div>
                 </div>
             </div>
 
@@ -3582,6 +3656,19 @@
                     <h3><i class="fas fa-tasks" style="color:var(--secondary);"></i> Customer Work Entries</h3>
                     <span class="badge badge-warning">Approve to credit Staff Wallet</span>
                 </div>
+
+                <!-- Live Search & Quick Approve Header -->
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div class="work-search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="ownerWorkSearchInput" placeholder="🔍 Search work entries by staff, customer, phone, service..." oninput="handleOwnerWorkSearch()">
+                        <button type="button" class="work-search-clear" id="clearOwnerWorkSearchBtn" onclick="clearOwnerWorkSearch()" style="display:none;" title="Clear Search">✕</button>
+                    </div>
+                    <button class="btn btn-success btn-xs" id="quickApprovePendingBtn" onclick="quickApproveAllPending()" style="display:none;font-weight:700;white-space:nowrap;">
+                        <i class="fas fa-check-double"></i> ⚡ Approve All Pending (<span id="quickPendingBadgeCount">0</span>)
+                    </button>
+                </div>
+
                 <div class="filter-bar">
                     <button class="filter-btn active" data-filter="today" onclick="setFilter('today')">📆 Today</button>
                     <button class="filter-btn" data-filter="month" onclick="setFilter('month')">📅 Month</button>
@@ -3601,10 +3688,38 @@
                                 class="fas fa-times"></i></button>
                     </div>
                 </div>
+
+                <!-- Bulk Selection Action Bar -->
+                <div id="workBulkActionBar" class="work-bulk-bar" style="display:none;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="font-weight:700;font-size:0.82rem;color:var(--primary);display:inline-flex;align-items:center;gap:5px;">
+                            <i class="fas fa-check-square" style="color:var(--secondary);"></i> <span id="bulkSelectedCount">0</span> Selected
+                        </span>
+                        <span id="bulkPendingBadge" class="badge badge-warning" style="font-size:0.7rem;display:none;">0 Pending</span>
+                        <button type="button" class="btn btn-xs" onclick="toggleSelectOnlyPendingWork()" style="background:var(--bg-body);border:1px solid var(--border-color);color:var(--text-primary);cursor:pointer;font-size:0.72rem;" title="Select only pending items among visible">
+                            <i class="fas fa-filter"></i> Select Pending Only
+                        </button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-success btn-xs" id="bulkApproveActionBtn" onclick="bulkApproveSelectedWork()" style="font-weight:700;">
+                            <i class="fas fa-check-double"></i> Approve Selected (<span id="bulkApproveCount">0</span>)
+                        </button>
+                        <button type="button" class="btn btn-danger btn-xs" id="bulkDeleteActionBtn" onclick="bulkDeleteSelectedWork()" style="font-weight:700;">
+                            <i class="fas fa-trash"></i> Delete Selected (<span id="bulkDeleteCount">0</span>)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-xs" onclick="clearWorkSelection()" title="Clear Selection">
+                            <i class="fas fa-times"></i> Deselect
+                        </button>
+                    </div>
+                </div>
+
                 <div class="table-wrap">
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th style="width:38px;text-align:center;">
+                                    <input type="checkbox" id="workSelectAll" title="Select / Deselect all visible entries" onchange="toggleSelectAllWork(this.checked)" style="width:17px;height:17px;cursor:pointer;accent-color:var(--secondary);vertical-align:middle;">
+                                </th>
                                 <th>#</th>
                                 <th>Date</th>
                                 <th>Staff</th>
@@ -4091,6 +4206,15 @@
                     <h3><i class="fas fa-list" style="color:var(--secondary);"></i> My Work Submissions</h3>
                     <span class="badge badge-info" id="empWorkCountBadge">Showing: 0</span>
                 </div>
+
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div class="work-search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="empWorkSearchInput" placeholder="🔍 Search my work by service, customer, phone..." oninput="handleEmpWorkSearch()">
+                        <button type="button" class="work-search-clear" id="clearEmpWorkSearchBtn" onclick="clearEmpWorkSearch()" style="display:none;" title="Clear Search">✕</button>
+                    </div>
+                </div>
+
                 <!-- Staff Filter Bar (Day, Month, Year, Custom Range) -->
                 <div class="filter-bar">
                     <button class="filter-btn active" data-empfilter="today" onclick="setEmpFilter('today')">📆
@@ -7609,7 +7733,7 @@
             renderAttendanceDashboard();
             renderOwnerPaymentRequests();
             updateNotificationBadge();
-            switchReportTab('daily');
+            switchReportTab(currentBusinessReportPeriod || 'daily');
         }
 
         function updateOwnerSelectors() {
@@ -7844,8 +7968,438 @@
             `;
         }
 
+        // =============================================
+        // WORK ENTRIES SELECTION, SEARCH & BULK SYSTEM
+        // =============================================
+        let selectedWorkIds = new Set();
+        let ownerWorkSearchQuery = '';
+        let empWorkSearchQuery = '';
+
+        function handleOwnerWorkSearch() {
+            const inp = document.getElementById('ownerWorkSearchInput');
+            ownerWorkSearchQuery = (inp ? inp.value : '').toLowerCase().trim();
+            const clrBtn = document.getElementById('clearOwnerWorkSearchBtn');
+            if (clrBtn) clrBtn.style.display = ownerWorkSearchQuery.length > 0 ? 'inline-block' : 'none';
+            renderOwnerTables();
+        }
+
+        function clearOwnerWorkSearch() {
+            const inp = document.getElementById('ownerWorkSearchInput');
+            if (inp) inp.value = '';
+            ownerWorkSearchQuery = '';
+            const clrBtn = document.getElementById('clearOwnerWorkSearchBtn');
+            if (clrBtn) clrBtn.style.display = 'none';
+            renderOwnerTables();
+            inp?.focus();
+        }
+
+        function handleEmpWorkSearch() {
+            const inp = document.getElementById('empWorkSearchInput');
+            empWorkSearchQuery = (inp ? inp.value : '').toLowerCase().trim();
+            const clrBtn = document.getElementById('clearEmpWorkSearchBtn');
+            if (clrBtn) clrBtn.style.display = empWorkSearchQuery.length > 0 ? 'inline-block' : 'none';
+            renderEmployeeView();
+        }
+
+        function clearEmpWorkSearch() {
+            const inp = document.getElementById('empWorkSearchInput');
+            if (inp) inp.value = '';
+            empWorkSearchQuery = '';
+            const clrBtn = document.getElementById('clearEmpWorkSearchBtn');
+            if (clrBtn) clrBtn.style.display = 'none';
+            renderEmployeeView();
+            inp?.focus();
+        }
+
+        function toggleWorkSelect(id, checked) {
+            const sid = String(id).trim();
+            if (checked) {
+                selectedWorkIds.add(sid);
+            } else {
+                selectedWorkIds.delete(sid);
+            }
+            const row = document.querySelector(`.work-row-chk[data-id="${sid}"]`)?.closest('tr');
+            if (row) row.classList.toggle('selected-work-row', checked);
+            updateBulkActionBar();
+        }
+
+        function toggleSelectAllWork(masterChecked) {
+            const visibleCheckboxes = document.querySelectorAll('#ownerEntriesBody .work-row-chk');
+            visibleCheckboxes.forEach(chk => {
+                chk.checked = masterChecked;
+                const sid = String(chk.getAttribute('data-id')).trim();
+                const row = chk.closest('tr');
+                if (masterChecked) {
+                    selectedWorkIds.add(sid);
+                    if (row) row.classList.add('selected-work-row');
+                } else {
+                    selectedWorkIds.delete(sid);
+                    if (row) row.classList.remove('selected-work-row');
+                }
+            });
+            updateBulkActionBar();
+        }
+
+        function toggleSelectOnlyPendingWork() {
+            const visibleCheckboxes = document.querySelectorAll('#ownerEntriesBody .work-row-chk');
+            selectedWorkIds.clear();
+            visibleCheckboxes.forEach(chk => {
+                const sid = String(chk.getAttribute('data-id')).trim();
+                const status = chk.getAttribute('data-status');
+                const row = chk.closest('tr');
+                if (status === 'pending') {
+                    chk.checked = true;
+                    selectedWorkIds.add(sid);
+                    if (row) row.classList.add('selected-work-row');
+                } else {
+                    chk.checked = false;
+                    if (row) row.classList.remove('selected-work-row');
+                }
+            });
+            updateBulkActionBar();
+        }
+
+        function clearWorkSelection() {
+            selectedWorkIds.clear();
+            document.querySelectorAll('#ownerEntriesBody .work-row-chk').forEach(chk => {
+                chk.checked = false;
+                chk.closest('tr')?.classList.remove('selected-work-row');
+            });
+            const masterChk = document.getElementById('workSelectAll');
+            if (masterChk) {
+                masterChk.checked = false;
+                masterChk.indeterminate = false;
+            }
+            updateBulkActionBar();
+        }
+
+        function onWorkRowClick(event, id) {
+            if (event.target.closest('button') || event.target.closest('input') || event.target.closest('a') || event.target.closest('select')) {
+                return;
+            }
+            const sid = String(id).trim();
+            const chk = document.querySelector(`.work-row-chk[data-id="${sid}"]`);
+            if (chk) {
+                chk.checked = !chk.checked;
+                toggleWorkSelect(sid, chk.checked);
+            }
+        }
+
+        function updateBulkActionBar() {
+            const bar = document.getElementById('workBulkActionBar');
+            const countEl = document.getElementById('bulkSelectedCount');
+            const pendingBadge = document.getElementById('bulkPendingBadge');
+            const approveBtn = document.getElementById('bulkApproveActionBtn');
+            const approveCountEl = document.getElementById('bulkApproveCount');
+            const deleteCountEl = document.getElementById('bulkDeleteCount');
+            const masterChk = document.getElementById('workSelectAll');
+
+            const totalSelected = selectedWorkIds.size;
+
+            let pendingCount = 0;
+            if (currentOwner && Array.isArray(currentOwner.workEntries)) {
+                selectedWorkIds.forEach(sid => {
+                    const entry = currentOwner.workEntries.find(e => String(e.id).trim() === sid);
+                    if (entry && entry.approvalStatus === 'pending') {
+                        pendingCount++;
+                    }
+                });
+            }
+
+            if (countEl) countEl.textContent = totalSelected;
+            if (approveCountEl) approveCountEl.textContent = pendingCount;
+            if (deleteCountEl) deleteCountEl.textContent = totalSelected;
+            if (pendingBadge) {
+                pendingBadge.textContent = `${pendingCount} Pending`;
+                pendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+            }
+
+            if (approveBtn) {
+                if (pendingCount === 0) {
+                    approveBtn.disabled = true;
+                    approveBtn.style.opacity = '0.5';
+                    approveBtn.style.cursor = 'not-allowed';
+                } else {
+                    approveBtn.disabled = false;
+                    approveBtn.style.opacity = '1';
+                    approveBtn.style.cursor = 'pointer';
+                }
+            }
+
+            if (bar) {
+                bar.style.display = totalSelected > 0 ? 'flex' : 'none';
+            }
+
+            if (masterChk) {
+                const visibleCheckboxes = document.querySelectorAll('#ownerEntriesBody .work-row-chk');
+                if (visibleCheckboxes.length === 0) {
+                    masterChk.checked = false;
+                    masterChk.indeterminate = false;
+                } else {
+                    let checkedCount = 0;
+                    visibleCheckboxes.forEach(c => { if (c.checked) checkedCount++; });
+                    if (checkedCount === 0) {
+                        masterChk.checked = false;
+                        masterChk.indeterminate = false;
+                    } else if (checkedCount === visibleCheckboxes.length) {
+                        masterChk.checked = true;
+                        masterChk.indeterminate = false;
+                    } else {
+                        masterChk.checked = false;
+                        masterChk.indeterminate = true;
+                    }
+                }
+            }
+        }
+
+        function bulkApproveSelectedWork() {
+            if (!currentOwner || !currentOwner.workEntries || selectedWorkIds.size === 0) {
+                return showToast('⚠️ No work entries selected', 'warning');
+            }
+
+            const selectedEntries = currentOwner.workEntries.filter(e => selectedWorkIds.has(String(e.id).trim()));
+            const pendingToApprove = selectedEntries.filter(e => e.approvalStatus === 'pending');
+
+            if (pendingToApprove.length === 0) {
+                return showToast('ℹ️ All selected entries are already approved!', 'info');
+            }
+
+            const approvedIds = [];
+            const clonesToDelete = [];
+
+            pendingToApprove.forEach(entry => {
+                const sid = String(entry.id).trim();
+                approvedIds.push(sid);
+                recentlyApprovedWorkIds.add(sid);
+                entry.approvalStatus = 'approved';
+
+                // Deduplicate any rapid multi-tap duplicate clones
+                const empId = String(entry.employeeId || entry.employeeName || '').trim().toLowerCase();
+                const workName = String(entry.workName || '').trim().toLowerCase();
+                const dateStr = getNormalizedDateStr(entry.date || '');
+                const custName = String(entry.customerName || '').trim().toLowerCase();
+                const price = Math.round((parseFloat(entry.customerPrice) || 0) * 100);
+
+                currentOwner.workEntries.forEach(e => {
+                    const eSid = String(e.id).trim();
+                    if (eSid !== sid && !approvedIds.includes(eSid)) {
+                        const eEmp = String(e.employeeId || e.employeeName || '').trim().toLowerCase();
+                        const eWork = String(e.workName || '').trim().toLowerCase();
+                        const eDate = getNormalizedDateStr(e.date || '');
+                        const eCust = String(e.customerName || '').trim().toLowerCase();
+                        const ePrice = Math.round((parseFloat(e.customerPrice) || 0) * 100);
+
+                        if (eEmp === empId && eWork === workName && eDate === dateStr && eCust === custName && ePrice === price) {
+                            clonesToDelete.push(eSid);
+                            recentlyDeletedWorkIds.add(eSid);
+                        }
+                    }
+                });
+            });
+
+            try {
+                localStorage.setItem('kjr_appr_work_ids', JSON.stringify(Array.from(recentlyApprovedWorkIds)));
+                if (clonesToDelete.length > 0) {
+                    localStorage.setItem('kjr_del_work_ids', JSON.stringify(Array.from(recentlyDeletedWorkIds)));
+                    currentOwner.workEntries = currentOwner.workEntries.filter(e => !clonesToDelete.includes(String(e.id).trim()));
+                }
+            } catch (e) {}
+
+            selectedWorkIds.clear();
+            saveOwners();
+            renderOwnerTables();
+            renderOwnerStats();
+            renderProfitAnalysis();
+            renderFinancialSummary();
+            updateBadges();
+            showToast(`✅ ${approvedIds.length} Work Entries Approved & Staff Wallets Credited!`, 'success');
+
+            // Cloud backend sync (both batch and individual for safety)
+            if (cloudApiUrl) {
+                try {
+                    fetch(cloudApiUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'approveWork', ids: approvedIds })
+                    }).catch(() => {});
+
+                    approvedIds.forEach(wid => {
+                        fetch(cloudApiUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'approveWork', id: wid })
+                        }).catch(() => {});
+                    });
+
+                    if (clonesToDelete.length > 0) {
+                        fetch(cloudApiUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'deleteRecord', sheetName: 'WorkEntries', ids: clonesToDelete })
+                        }).catch(() => {});
+                    }
+                } catch (e) {}
+            }
+
+            // Real-time MQTT notification
+            if (typeof publishRealtimeMqtt === 'function') {
+                pendingToApprove.forEach(entry => {
+                    publishRealtimeMqtt('work', { type: 'workApproved', id: String(entry.id), entry: entry });
+                });
+                clonesToDelete.forEach(cloneId => {
+                    publishRealtimeMqtt('work', { type: 'workDeleted', id: cloneId });
+                });
+            }
+
+            // Group by staff member for summary WhatsApp notification
+            const staffMap = {};
+            pendingToApprove.forEach(entry => {
+                const emp = currentOwner.employees.find(e => isRecordForStaff(entry, e));
+                if (emp) {
+                    if (!staffMap[emp.id]) staffMap[emp.id] = { emp, entries: [] };
+                    staffMap[emp.id].entries.push(entry);
+                }
+            });
+
+            const staffKeys = Object.keys(staffMap);
+            if (staffKeys.length === 1) {
+                const item = staffMap[staffKeys[0]];
+                const cleanPhone = getCleanPhone(item.emp.mobile);
+                if (cleanPhone.length === 10) {
+                    setTimeout(() => {
+                        if (confirm(`✅ Approved ${item.entries.length} works for ${item.emp.name}!\n\n📲 Send WhatsApp approval notification to ${item.emp.name} (+91 ${cleanPhone})?`)) {
+                            sendWhatsAppBulkApproval(item.entries, item.emp);
+                        }
+                    }, 150);
+                }
+            }
+        }
+
+        function quickApproveAllPending() {
+            if (!currentOwner || !currentOwner.workEntries) return;
+            const pendingEntries = currentOwner.workEntries.filter(e => e.approvalStatus === 'pending');
+            if (pendingEntries.length === 0) {
+                return showToast('ℹ️ No pending work entries to approve!', 'info');
+            }
+
+            if (!confirm(`⚡ Approve ALL ${pendingEntries.length} pending work entries at once?\n\nStaff wallets will be credited immediately.`)) {
+                return;
+            }
+
+            selectedWorkIds = new Set(pendingEntries.map(e => String(e.id).trim()));
+            bulkApproveSelectedWork();
+        }
+
+        function sendWhatsAppBulkApproval(entries, emp) {
+            if (!entries || !emp) return;
+            const phone = getCleanPhone(emp.mobile);
+            if (phone.length !== 10) return;
+
+            const totalStaffPay = entries.reduce((s, e) => s + (parseFloat(e.employeePayment) || 0), 0);
+            const dateStr = entries[0]?.date || getTodayStr();
+
+            const summaryLines = entries.slice(0, 5).map(e => `• ${e.workName} (₹${(e.employeePayment || 0).toFixed(2)})`).join('\n');
+            const extraCount = entries.length > 5 ? `\n...and ${entries.length - 5} more jobs` : '';
+
+            const msg = encodeURIComponent(
+                `*${currentOwner.businessName || 'KJR SEVA KENDRA'} - WORK APPROVED*\n\n` +
+                `Hello ${emp.name},\n` +
+                `✅ Your *${entries.length} work submission(s)* have been APPROVED!\n\n` +
+                `💼 *Approved Work Summary:*\n` +
+                summaryLines + extraCount + `\n\n` +
+                `💰 *Total Wallet Credit:* ₹${totalStaffPay.toFixed(2)}\n` +
+                `📅 Date: ${dateStr}\n\n` +
+                `Check your updated Wallet Balance in your KJR HRMS portal. Great work!`
+            );
+
+            window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank');
+        }
+
+        function bulkDeleteSelectedWork() {
+            if (!currentOwner || !currentOwner.workEntries || selectedWorkIds.size === 0) {
+                return showToast('⚠️ No work entries selected', 'warning');
+            }
+
+            const count = selectedWorkIds.size;
+            if (!confirm(`⚠️ Are you sure you want to delete ${count} selected work record(s)?\n\nThis cannot be undone.`)) {
+                return;
+            }
+
+            const idsToDelete = Array.from(selectedWorkIds);
+            const allIdsToPurge = new Set(idsToDelete);
+
+            idsToDelete.forEach(sid => {
+                const entry = currentOwner.workEntries.find(e => String(e.id).trim() === sid);
+                if (entry) {
+                    const empId = String(entry.employeeId || entry.employeeName || '').trim().toLowerCase();
+                    const workName = String(entry.workName || '').trim().toLowerCase();
+                    const dateStr = getNormalizedDateStr(entry.date || '');
+                    const custName = String(entry.customerName || '').trim().toLowerCase();
+                    const price = Math.round((parseFloat(entry.customerPrice) || 0) * 100);
+
+                    currentOwner.workEntries.forEach(e => {
+                        const eSid = String(e.id).trim();
+                        const eEmp = String(e.employeeId || e.employeeName || '').trim().toLowerCase();
+                        const eWork = String(e.workName || '').trim().toLowerCase();
+                        const eDate = getNormalizedDateStr(e.date || '');
+                        const eCust = String(e.customerName || '').trim().toLowerCase();
+                        const ePrice = Math.round((parseFloat(e.customerPrice) || 0) * 100);
+
+                        if (eEmp === empId && eWork === workName && eDate === dateStr && eCust === custName && ePrice === price) {
+                            allIdsToPurge.add(eSid);
+                        }
+                    });
+                }
+            });
+
+            allIdsToPurge.forEach(id => recentlyDeletedWorkIds.add(id));
+            try {
+                localStorage.setItem('kjr_del_work_ids', JSON.stringify(Array.from(recentlyDeletedWorkIds)));
+            } catch (e) {}
+
+            currentOwner.workEntries = currentOwner.workEntries.filter(e => !allIdsToPurge.has(String(e.id).trim()));
+
+            selectedWorkIds.clear();
+            saveOwners();
+            renderOwnerTables();
+            renderOwnerStats();
+            renderProfitAnalysis();
+            renderFinancialSummary();
+            updateBadges();
+            showToast(`🗑️ ${count} work records deleted`, 'info');
+
+            if (cloudApiUrl) {
+                try {
+                    fetch(cloudApiUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'deleteRecord', sheetName: 'WorkEntries', ids: Array.from(allIdsToPurge) })
+                    }).catch(() => {});
+
+                    allIdsToPurge.forEach(id => {
+                        fetch(cloudApiUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'deleteRecord', sheetName: 'WorkEntries', id: id })
+                        }).catch(() => {});
+                    });
+                } catch (e) {}
+            }
+
+            if (typeof publishRealtimeMqtt === 'function') {
+                allIdsToPurge.forEach(id => {
+                    publishRealtimeMqtt('work', { type: 'workDeleted', id: id });
+                });
+            }
+        }
+
         function renderOwnerTables() {
-            let filtered = currentOwner.workEntries.slice();
+            let filtered = (currentOwner && Array.isArray(currentOwner.workEntries)) ? currentOwner.workEntries.slice() : [];
 
             if (ownerDateRange) {
                 filtered = filtered.filter(e => e.date >= ownerDateRange.start && e.date <= ownerDateRange.end);
@@ -7869,35 +8423,87 @@
                 }
             }
 
-            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+            // Realtime Search Filter
+            if (ownerWorkSearchQuery) {
+                const q = ownerWorkSearchQuery.toLowerCase().trim();
+                filtered = filtered.filter(e => {
+                    const empName = String(e.employeeName || '').toLowerCase();
+                    const custName = String(e.customerName || '').toLowerCase();
+                    const custPhone = String(e.customerPhone || '').toLowerCase();
+                    const workName = String(e.workName || '').toLowerCase();
+                    const dateStr = String(e.date || '').toLowerCase();
+                    const idStr = String(e.id || '').toLowerCase();
+                    return empName.includes(q) || custName.includes(q) || custPhone.includes(q) || workName.includes(q) || dateStr.includes(q) || idStr.includes(q);
+                });
+            }
 
-            document.getElementById('ownerEntriesBody').innerHTML = filtered.map((e, i) => `
-                <tr>
+            // Clean, chronological sort (latest date + time + id on top)
+            filtered.sort((a, b) => {
+                const dateA = getNormalizedDateStr(a.date) + ' ' + (a.time || '00:00');
+                const dateB = getNormalizedDateStr(b.date) + ' ' + (b.time || '00:00');
+                if (dateA !== dateB) return dateB.localeCompare(dateA);
+                return String(b.id || '').localeCompare(String(a.id || ''));
+            });
+
+            // Update Quick Approve Pending Button & Badges
+            const allPendingCount = (currentOwner && Array.isArray(currentOwner.workEntries))
+                ? currentOwner.workEntries.filter(e => e.approvalStatus === 'pending').length
+                : 0;
+
+            const qBtn = document.getElementById('quickApprovePendingBtn');
+            const qCount = document.getElementById('quickPendingBadgeCount');
+            if (qBtn && qCount) {
+                qCount.textContent = allPendingCount;
+                qBtn.style.display = allPendingCount > 0 ? 'inline-flex' : 'none';
+            }
+
+            const pendingFilterBtn = document.querySelector('#workSection .filter-btn[data-filter="pending_approval"]');
+            if (pendingFilterBtn) {
+                pendingFilterBtn.innerHTML = `⏳ Pending ${allPendingCount > 0 ? `<span class="badge badge-warning" style="margin-left:4px;padding:2px 6px;border-radius:10px;font-size:0.7rem;">${allPendingCount}</span>` : ''}`;
+            }
+
+            // Clean up any deleted entries from selectedWorkIds
+            const currentIds = new Set((currentOwner.workEntries || []).map(e => String(e.id).trim()));
+            for (const sid of selectedWorkIds) {
+                if (!currentIds.has(sid)) selectedWorkIds.delete(sid);
+            }
+
+            document.getElementById('ownerEntriesBody').innerHTML = filtered.map((e, i) => {
+                const sid = String(e.id).trim();
+                const isSelected = selectedWorkIds.has(sid);
+                return `
+                <tr class="${isSelected ? 'selected-work-row' : ''}" onclick="onWorkRowClick(event, '${escapeJs(sid)}')">
+                    <td style="text-align:center;">
+                        <input type="checkbox" class="work-row-chk" data-id="${escapeHtml(sid)}" data-status="${e.approvalStatus}" ${isSelected ? 'checked' : ''} onchange="toggleWorkSelect('${escapeJs(sid)}', this.checked)" style="width:17px;height:17px;cursor:pointer;accent-color:var(--secondary);vertical-align:middle;">
+                    </td>
                     <td>${i + 1}</td>
                     <td>${e.date}</td>
-                    <td><strong>${e.employeeName}</strong></td>
-                    <td><span class="badge badge-info">${e.workName}</span></td>
+                    <td><strong>${escapeHtml(e.employeeName || 'Staff')}</strong></td>
+                    <td><span class="badge badge-info">${escapeHtml(e.workName || 'Work')}</span></td>
                     <td>₹${(e.employeePayment || 0).toFixed(2)}</td>
                     <td>₹${(e.customerPrice || 0).toFixed(2)}</td>
-                    <td>${e.customerName || '—'}</td>
-                    <td>${e.customerPhone || '—'}</td>
+                    <td>${escapeHtml(e.customerName || '—')}</td>
+                    <td>${escapeHtml(e.customerPhone || '—')}</td>
                     <td>₹${(e.customerPayment || 0).toFixed(2)}</td>
                     <td><span class="badge ${e.completed ? 'badge-success' : 'badge-warning'}">${e.completed ? 'Done' : 'Pending'}</span></td>
                     <td><span class="approval-badge ${e.approvalStatus}">${e.approvalStatus}</span></td>
                     <td>
-                        <button class="btn btn-secondary btn-xs" onclick="printReceipt('${e.id}')" title="Print Slip"><i class="fas fa-print"></i></button>
-                        ${e.customerPhone ? `<button class="btn btn-success btn-xs" onclick="sendWhatsAppSlip('${e.id}')" title="Send WhatsApp Slip"><i class="fab fa-whatsapp"></i></button>` : ''}
+                        <button class="btn btn-secondary btn-xs" onclick="printReceipt('${escapeJs(sid)}')" title="Print Slip"><i class="fas fa-print"></i></button>
+                        ${e.customerPhone ? `<button class="btn btn-success btn-xs" onclick="sendWhatsAppSlip('${escapeJs(sid)}')" title="Send WhatsApp Slip"><i class="fab fa-whatsapp"></i></button>` : ''}
                     </td>
                     <td>
                         ${e.approvalStatus === 'pending' ? `
-                            <button class="btn btn-success btn-xs" onclick="approveWork('${e.id}')"><i class="fas fa-check"></i></button>
+                            <button class="btn btn-success btn-xs" onclick="approveWork('${escapeJs(sid)}')" title="Approve"><i class="fas fa-check"></i></button>
                         ` : ''}
-                        <button class="btn btn-danger btn-xs" onclick="deleteWorkEntry('${e.id}')"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-danger btn-xs" onclick="deleteWorkEntry('${escapeJs(sid)}')" title="Delete"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="13" style="text-align:center;padding:20px;">No work entries yet</td></tr>';
+            `;
+            }).join('') || '<tr><td colspan="14" style="text-align:center;padding:22px;color:var(--text-secondary);"><i class="fas fa-inbox" style="font-size:20px;display:block;margin-bottom:6px;"></i>No work entries found</td></tr>';
 
-            document.getElementById('ownerPaymentBody').innerHTML = currentOwner.paymentRecords.slice().reverse().map(p => {
+            updateBulkActionBar();
+
+            document.getElementById('ownerPaymentBody').innerHTML = (currentOwner.paymentRecords || []).slice().reverse().map(p => {
                 const emp = currentOwner.employees.find(e => e.id === p.employeeId);
                 const cleanPhone = emp ? getCleanPhone(emp.mobile) : '';
                 return `
@@ -7924,7 +8530,6 @@
             const entry = currentOwner.workEntries.find(e => String(e.id).trim() === sid);
             if (!entry) return;
 
-            // Track recently approved ID so cloud sync cannot revert it to pending
             recentlyApprovedWorkIds.add(sid);
             try {
                 localStorage.setItem('kjr_appr_work_ids', JSON.stringify(Array.from(recentlyApprovedWorkIds)));
@@ -7942,7 +8547,7 @@
             const clonesToDelete = [];
             currentOwner.workEntries = currentOwner.workEntries.filter(e => {
                 const eSid = String(e.id).trim();
-                if (eSid === sid) return true; // Keep this approved record
+                if (eSid === sid) return true;
 
                 const eEmp = String(e.employeeId || e.employeeName || '').trim().toLowerCase();
                 const eWork = String(e.workName || '').trim().toLowerCase();
@@ -7951,7 +8556,6 @@
                 const ePrice = Math.round((parseFloat(e.customerPrice) || 0) * 100);
 
                 if (eEmp === empId && eWork === workName && eDate === dateStr && eCust === custName && ePrice === price) {
-                    // Accidental duplicate clone: mark for deletion and purge
                     clonesToDelete.push(eSid);
                     recentlyDeletedWorkIds.add(eSid);
                     return false;
@@ -7965,12 +8569,14 @@
                 } catch (e) {}
             }
 
+            selectedWorkIds.delete(sid);
             saveOwners();
             renderOwnerTables();
             renderOwnerStats();
             renderProfitAnalysis();
             renderFinancialSummary();
             updateBadges();
+            updateBulkActionBar();
             showToast('✅ Work Approved & Staff Wallet Credited!', 'success');
 
             // Send approveWork and delete any redundant clones in Google Apps Script
@@ -8008,9 +8614,7 @@
             const cleanPhone = emp ? getCleanPhone(emp.mobile) : '';
             if (cleanPhone.length === 10) {
                 setTimeout(() => {
-                    if (confirm(`✅ Work approved for ${emp.name}!
-
-📲 Send WhatsApp approval notification to ${emp.name} (+91 ${cleanPhone})?`)) {
+                    if (confirm(`✅ Work approved for ${emp.name}!\n\n📲 Send WhatsApp approval notification to ${emp.name} (+91 ${cleanPhone})?`)) {
                         sendWhatsAppWorkApproval(entry, emp);
                     }
                 }, 150);
@@ -8024,7 +8628,6 @@
             if (!entry) return;
 
             if (confirm('Delete this record?')) {
-                // Collect this ID and any duplicate clones of this same submission
                 const idsToDelete = [sid];
                 const empId = String(entry.employeeId || entry.employeeName || '').trim().toLowerCase();
                 const workName = String(entry.workName || '').trim().toLowerCase();
@@ -8046,21 +8649,22 @@
                     }
                 });
 
-                // Add all deleted IDs to recentlyDeletedWorkIds and persist
                 idsToDelete.forEach(delId => recentlyDeletedWorkIds.add(delId));
                 try {
                     localStorage.setItem('kjr_del_work_ids', JSON.stringify(Array.from(recentlyDeletedWorkIds)));
                 } catch (e) {}
 
                 currentOwner.workEntries = currentOwner.workEntries.filter(w => !idsToDelete.includes(String(w.id).trim()));
+                idsToDelete.forEach(delId => selectedWorkIds.delete(delId));
                 saveOwners();
                 renderOwnerTables();
                 renderOwnerStats();
                 renderFinancialSummary();
+                updateBadges();
+                updateBulkActionBar();
                 addNotification('🗑️ Record Deleted', `Work entry #${sid} was deleted`, 'warning');
                 showToast('Record deleted', 'info');
 
-                // Delete all clones from cloud sheet
                 if (cloudApiUrl) {
                     idsToDelete.forEach(delId => {
                         fetch(cloudApiUrl, {
@@ -8068,13 +8672,10 @@
                             mode: 'no-cors',
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify({ action: 'deleteRecord', sheetName: 'WorkEntries', id: delId })
-                        }).then(() => {
-                            console.log('✅ Work entry deleted from cloud sheet:', delId);
-                        }).catch(err => console.warn('Cloud work delete warning:', err));
+                        }).catch(() => {});
                     });
                 }
 
-                // Broadcast deletion via MQTT so other open tabs/phones remove it immediately
                 if (typeof publishRealtimeMqtt === 'function') {
                     idsToDelete.forEach(delId => {
                         publishRealtimeMqtt('work', { type: 'workDeleted', id: delId });
@@ -8180,11 +8781,20 @@
         let isStaffIncomeHidden = localStorage.getItem('kjr_hide_staff_income') === '1';
 
         function isStaffSelfCheckInAllowed() {
-            return localStorage.getItem('allowStaffSelfCheckIn') === 'true';
+            // Default to ALLOWED (true) so staff can self check-in on phones/PCs out of the box
+            if (currentOwner && currentOwner.allowStaffSelfCheckIn !== undefined) {
+                return currentOwner.allowStaffSelfCheckIn !== false;
+            }
+            const stored = localStorage.getItem('allowStaffSelfCheckIn');
+            return stored !== 'false'; // Only false if explicitly disabled
         }
 
         function setStaffSelfCheckInPermission(allowed) {
             localStorage.setItem('allowStaffSelfCheckIn', allowed ? 'true' : 'false');
+            if (currentOwner) {
+                currentOwner.allowStaffSelfCheckIn = allowed;
+                saveOwners();
+            }
             showToast(allowed ? '🟢 Staff can now self check-in on mobile phones' : '🔒 Staff check-in restricted to Store Owner at counter', 'info');
             renderAttendanceDashboard();
         }
@@ -8924,15 +9534,30 @@
                 }
 
                 const customerPayment = parseFloat(document.getElementById('empCustPayment').value) || 0;
+                let serviceName = sel.value;
+                let customerPrice = parseFloat(sel.getAttribute('data-customer')) || 0;
+                let employeePayment = parseFloat(sel.getAttribute('data-employee')) || 0;
+
+                if (serviceName === 'OTHER') {
+                    const customQuery = (document.getElementById('empServiceSearchInput')?.value || '').trim();
+                    if (customQuery) {
+                        serviceName = 'OTHER: ' + customQuery.toUpperCase();
+                    }
+                    if (customerPayment > 0) {
+                        customerPrice = customerPayment;
+                        employeePayment = Math.round(customerPayment * 0.15); // Default 15% commission
+                    }
+                }
+
                 const newEntry = {
                     id: 'work_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                     employeeId: String(currentEmployee.id || ''),
                     employeeName: String(currentEmployee.name || 'Staff'),
                     employeeEmail: String(currentEmployee.email || ''),
                     employeeMobile: String(currentEmployee.mobile || ''),
-                    workName: sel.value,
-                    employeePayment: parseFloat(sel.getAttribute('data-employee')) || 0,
-                    customerPrice: parseFloat(sel.getAttribute('data-customer')) || 0,
+                    workName: serviceName,
+                    employeePayment: employeePayment,
+                    customerPrice: customerPrice,
                     date: getTodayStr(),
                     time: getCurrentTime(),
                     customerName: customerName,
@@ -8953,17 +9578,6 @@
                 // Trigger notifications & update badges
                 addNotification('➕ Work Submitted', `${currentEmployee.name} submitted: ${newEntry.workName}`, 'work');
                 updateBadges();
-
-                if (newEntry.workName === 'OTHER') {
-                    const customQuery = (document.getElementById('empServiceSearchInput')?.value || '').trim();
-                    if (customQuery) {
-                        newEntry.workName = 'OTHER: ' + customQuery.toUpperCase();
-                    }
-                    if (customerPayment > 0) {
-                        newEntry.customerPrice = customerPayment;
-                        newEntry.employeePayment = Math.round(customerPayment * 0.15); // Default 15% commission
-                    }
-                }
 
                 // Reset inputs cleanly
                 ['empCustName', 'empCustPhone', 'empCustPayment', 'empPrintCopies', 'empScanCopies'].forEach(id => {
@@ -9099,6 +9713,18 @@
                     filteredWork = filteredWork.filter(e => e.approvalStatus === 'approved');
                 }
                 // 'all' shows all without extra filtering
+            }
+
+            if (empWorkSearchQuery) {
+                const q = empWorkSearchQuery.toLowerCase().trim();
+                filteredWork = filteredWork.filter(e => {
+                    const workName = String(e.workName || '').toLowerCase();
+                    const custName = String(e.customerName || '').toLowerCase();
+                    const custPhone = String(e.customerPhone || '').toLowerCase();
+                    const dateStr = String(e.date || '').toLowerCase();
+                    const idStr = String(e.id || '').toLowerCase();
+                    return workName.includes(q) || custName.includes(q) || custPhone.includes(q) || dateStr.includes(q) || idStr.includes(q);
+                });
             }
 
             filteredWork.sort((a, b) => {
@@ -9537,8 +10163,22 @@
 
         function refreshAllViews() {
             if (!isLoggedIn) return;
-            if (isUserOwner()) initOwnerDashboard();
-            else initEmployeeDashboard();
+            if (isUserOwner()) {
+                renderEmployeeList();
+                renderOwnerTables();
+                renderProfitAnalysis();
+                renderOwnerStats();
+                renderFinancialSummary();
+                renderActivityFeed();
+                updateBadges();
+                renderLeaveManagement();
+                renderAttendanceDashboard();
+                renderOwnerPaymentRequests();
+                updateNotificationBadge();
+                switchReportTab(currentBusinessReportPeriod || 'daily');
+            } else {
+                renderEmployeeView();
+            }
         }
 
         function updateBadges() {
@@ -9561,6 +10201,7 @@
                 bannerCount.textContent = pending;
                 bannerCard.style.display = pending > 0 ? 'block' : 'none';
             }
+            document.querySelectorAll('.quick-pending-badge').forEach(el => el.textContent = pending);
         }
 
         // =============================================
@@ -10029,13 +10670,17 @@
         }
 
         function staffSelfCheckIn() {
-            if (!currentEmployee) return;
-            if (!isStaffSelfCheckInAllowed()) {
-                return showToast('🔒 Shift attendance is recorded directly by the Store Owner at the counter.', 'warning');
+            if (!currentEmployee) {
+                return showToast('❌ Staff session expired. Please log in again.', 'error');
             }
+            if (!isStaffSelfCheckInAllowed()) {
+                return showToast('🔒 Shift attendance is restricted by the Store Owner.', 'warning');
+            }
+            if (!currentOwner) currentOwner = owners[0] || {};
+            if (!currentOwner.attendance) currentOwner.attendance = [];
+
             const date = getTodayStr();
             const time = getCurrentTime();
-            if (!currentOwner.attendance) currentOwner.attendance = [];
 
             // Match by staff ID, email, or mobile
             const existing = currentOwner.attendance.find(a => 
@@ -10043,12 +10688,15 @@
                 getNormalizedDateStr(a.date) === date
             );
             if (existing) {
-                return showToast(`⚠️ You already checked in today at ${formatCleanTime(existing.checkIn)}`, 'warning');
+                if (existing.checkOut) {
+                    return showToast(`ℹ️ You already completed today's shift (${formatCleanTime(existing.checkIn)} - ${formatCleanTime(existing.checkOut)})`, 'info');
+                }
+                return showToast(`⚠️ You are already checked in today at ${formatCleanTime(existing.checkIn)}`, 'warning');
             }
 
             const record = {
                 id: 'att_' + Date.now(),
-                employeeId: String(currentEmployee.id),
+                employeeId: String(currentEmployee.id || ''),
                 employeeName: String(currentEmployee.name || 'Staff'),
                 employeeEmail: String(currentEmployee.email || ''),
                 employeeMobile: String(currentEmployee.mobile || ''),
@@ -10059,7 +10707,7 @@
                 status: 'Present'
             };
 
-            currentOwner.attendance.push(record);
+            currentOwner.attendance.unshift(record);
             saveOwners();
             renderEmployeeAttendanceView();
             updateStaffHeroShiftCard();
@@ -10077,13 +10725,20 @@
                     console.log('✅ Staff check-in synced to Google Sheets');
                 }).catch(err => console.warn('Cloud check-in error:', err));
             }
+
+            // Real-time broadcast to Owner and other open tabs via MQTT
+            if (typeof publishRealtimeMqtt === 'function') {
+                publishRealtimeMqtt('attendance', { type: 'checkIn', record: record, staffName: currentEmployee.name });
+            }
         }
 
         function staffSelfCheckOut() {
             if (!currentEmployee) return;
+            if (!currentOwner) currentOwner = owners[0] || {};
+            if (!currentOwner.attendance) currentOwner.attendance = [];
+
             const date = getTodayStr();
             const time = getCurrentTime();
-            if (!currentOwner.attendance) currentOwner.attendance = [];
 
             const existing = currentOwner.attendance.find(a => 
                 (isRecordForStaff(a, currentEmployee) || String(a.employeeId).trim() === String(currentEmployee.id).trim()) && 
@@ -10115,6 +10770,11 @@
                 }).then(() => {
                     console.log('✅ Staff check-out synced to Google Sheets');
                 }).catch(err => console.warn('Cloud check-out error:', err));
+            }
+
+            // Real-time broadcast to Owner via MQTT
+            if (typeof publishRealtimeMqtt === 'function') {
+                publishRealtimeMqtt('attendance', { type: 'checkOut', record: existing, staffName: currentEmployee.name });
             }
         }
 
@@ -10568,7 +11228,12 @@
             showToast(`❌ Leave rejected for ${req.employeeName}`, 'info');
             if (cloudApiUrl) triggerManualSync();
         }
+        let currentBusinessReportPeriod = 'daily';
+
         function switchReportTab(period) {
+            if (period) currentBusinessReportPeriod = period;
+            period = currentBusinessReportPeriod || 'daily';
+
             const tabs = document.querySelectorAll('#reportsSection .tab');
             tabs.forEach(t => t.classList.remove('active'));
             const activeBtn = Array.from(tabs).find(t => t.getAttribute('onclick') && t.getAttribute('onclick').includes(period));
@@ -10586,22 +11251,16 @@
 
             if (period === 'daily') {
                 periodTitle = "Today's Business Summary (" + todayStr + ")";
-                filtered = approved.filter(e => e.date === todayStr);
+                filtered = approved.filter(e => isDateInPeriod(e.date, 'today'));
             } else if (period === 'weekly') {
                 periodTitle = "Past 7 Days Performance";
-                const d7 = new Date();
-                d7.setDate(d7.getDate() - 7);
-                const d7Str = d7.toISOString().slice(0, 10);
-                filtered = approved.filter(e => e.date >= d7Str);
+                filtered = approved.filter(e => isDateInPeriod(e.date, '7_days'));
             } else if (period === 'monthly') {
                 periodTitle = "This Month (" + now.toLocaleString('default', { month: 'long', year: 'numeric' }) + ")";
-                filtered = approved.filter(e => {
-                    const d = new Date(e.date);
-                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                });
+                filtered = approved.filter(e => isDateInPeriod(e.date, 'month'));
             } else if (period === 'yearly') {
                 periodTitle = "Current Year (" + now.getFullYear() + ")";
-                filtered = approved.filter(e => new Date(e.date).getFullYear() === now.getFullYear());
+                filtered = approved.filter(e => isDateInPeriod(e.date, 'year'));
             } else if (period === 'employee') {
                 periodTitle = "Staff-wise Performance & Commissions";
             }
@@ -10611,9 +11270,9 @@
                 return;
             }
 
-            const totalRev = filtered.reduce((s, e) => s + (e.customerPrice || 0), 0);
-            const totalStaffPay = filtered.reduce((s, e) => s + (e.employeePayment || 0), 0);
-            const totalPrintScan = filtered.reduce((s, e) => s + (e.printCost || 0) + (e.scanCost || 0), 0);
+            const totalRev = filtered.reduce((s, e) => s + (parseFloat(e.customerPrice) || 0), 0);
+            const totalStaffPay = filtered.reduce((s, e) => s + (parseFloat(e.employeePayment) || 0), 0);
+            const totalPrintScan = filtered.reduce((s, e) => s + (parseFloat(e.printCost) || 0) + (parseFloat(e.scanCost) || 0), 0);
             const netShopProfit = totalRev - totalStaffPay - totalPrintScan;
             const margin = totalRev > 0 ? ((netShopProfit / totalRev) * 100).toFixed(1) : 0;
 
@@ -10621,7 +11280,7 @@
                 <div style="margin-top:14px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
                         <h4 style="font-size:14px;color:var(--text-primary);"><i class="fas fa-calendar-check" style="color:var(--secondary);"></i> ${periodTitle}</h4>
-                        <div style="display:flex;gap:8px;">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <span class="badge badge-success">Revenue: ₹${totalRev.toFixed(2)}</span>
                             <span class="badge badge-info">Net Profit: ₹${netShopProfit.toFixed(2)} (${margin}%)</span>
                         </div>
@@ -10632,22 +11291,22 @@
                                 <tr><th>Date &amp; Time</th><th>Staff</th><th>Service Name</th><th>Customer</th><th>Price</th><th>Staff Pay</th><th>Costs</th><th>Net Profit</th></tr>
                             </thead>
                             <tbody>
-                                ${filtered.slice(0, 30).map(e => {
-                const cost = (e.employeePayment || 0) + (e.printCost || 0) + (e.scanCost || 0);
-                const profit = (e.customerPrice || 0) - cost;
-                return `
+                                ${filtered.slice(0, 50).map(e => {
+                                    const cost = (parseFloat(e.employeePayment) || 0) + (parseFloat(e.printCost) || 0) + (parseFloat(e.scanCost) || 0);
+                                    const profit = (parseFloat(e.customerPrice) || 0) - cost;
+                                    return `
                                         <tr>
                                             <td>${e.date} <small style="color:var(--text-light);">${e.time || ''}</small></td>
-                                            <td><strong>${e.employeeName}</strong></td>
-                                            <td>${e.workName}</td>
-                                            <td>${e.customerName || '-'}</td>
-                                            <td><strong>₹${(e.customerPrice || 0).toFixed(2)}</strong></td>
-                                            <td>₹${(e.employeePayment || 0).toFixed(2)}</td>
+                                            <td><strong>${escapeHtml(e.employeeName || 'Staff')}</strong></td>
+                                            <td>${escapeHtml(e.workName || 'Service')}</td>
+                                            <td>${escapeHtml(e.customerName || '-')}</td>
+                                            <td><strong>₹${(parseFloat(e.customerPrice) || 0).toFixed(2)}</strong></td>
+                                            <td>₹${(parseFloat(e.employeePayment) || 0).toFixed(2)}</td>
                                             <td>₹${cost.toFixed(2)}</td>
                                             <td style="font-weight:700;color:${profit >= 0 ? '#16a34a' : '#dc2626'};">₹${profit.toFixed(2)}</td>
                                         </tr>
                                     `;
-            }).join('') || '<tr><td colspan="8" class="empty-state">No approved work records for this period</td></tr>'}
+                                }).join('') || '<tr><td colspan="8" class="empty-state" style="text-align:center;padding:22px;color:var(--text-secondary);"><i class="fas fa-inbox" style="font-size:20px;display:block;margin-bottom:6px;"></i>No approved work records for this period</td></tr>'}
                             </tbody>
                         </table>
                     </div>
@@ -11387,6 +12046,28 @@
                             saveOwners();
                             refreshAllViews();
                         }
+                    }
+                } else if (topic.endsWith('/attendance')) {
+                    if (data.type === 'checkIn' && data.record) {
+                        if (!currentOwner.attendance) currentOwner.attendance = [];
+                        const exists = currentOwner.attendance.some(a => String(a.id) === String(data.record.id));
+                        if (!exists) {
+                            currentOwner.attendance.unshift(data.record);
+                            saveOwners();
+                            renderAttendanceDashboard();
+                            addNotification('⏰ Staff Check-In', `${data.staffName || 'Staff'} checked in at ${data.record.checkIn}`, 'attendance');
+                        }
+                    } else if (data.type === 'checkOut' && data.record) {
+                        if (!currentOwner.attendance) currentOwner.attendance = [];
+                        const idx = currentOwner.attendance.findIndex(a => String(a.id) === String(data.record.id));
+                        if (idx !== -1) {
+                            currentOwner.attendance[idx] = data.record;
+                        } else {
+                            currentOwner.attendance.unshift(data.record);
+                        }
+                        saveOwners();
+                        renderAttendanceDashboard();
+                        addNotification('🏁 Staff Check-Out', `${data.staffName || 'Staff'} checked out at ${data.record.checkOut} (${data.record.hoursWorked})`, 'attendance');
                     }
                 } else if (topic.endsWith('/serviceCatalog')) {
                     if (data.type === 'catalogUpdated' && data.catalog && Array.isArray(data.catalog)) {
