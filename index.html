@@ -3523,23 +3523,19 @@
                         <div class="service-select-wrapper">
                             <div style="position:relative;">
                                 <input type="text" id="serviceSearchInput" class="search-input"
-                                    placeholder="🔍 Type to search services (PAN, Krushak, DL, Print)..."
-                                    oninput="filterServiceOptions()">
+                                    placeholder="🔍 Search services (PAN, DL, Aadhar, Krushak, Xerox, Bill)..."
+                                    oninput="filterServiceOptions()"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ownerCustName')?.focus();}">
                                 <button type="button" onclick="clearOwnerServiceSearch()"
                                     style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-light);font-size:14px;padding:4px;"><i
                                         class="fas fa-times-circle"></i></button>
                             </div>
                             <div class="service-category-pills" id="ownerCategoryPills">
-                                <button type="button" class="cat-pill active"
-                                    onclick="setOwnerCategoryFilter('all')">All</button>
-                                <button type="button" class="cat-pill"
-                                    onclick="setOwnerCategoryFilter('Print & Photo')">🖨️ Print/Photo</button>
-                                <button type="button" class="cat-pill"
-                                    onclick="setOwnerCategoryFilter('Certificate')">📜 Certificate</button>
-                                <button type="button" class="cat-pill"
-                                    onclick="setOwnerCategoryFilter('Government')">🏛️ Govt / Odisha</button>
-                                <button type="button" class="cat-pill" onclick="setOwnerCategoryFilter('CSC')">💳
-                                    Banking / CSC</button>
+                                <button type="button" class="cat-pill active" data-cat="all" onclick="setOwnerCategoryFilter('all')">All</button>
+                                <button type="button" class="cat-pill" data-cat="Print & Photo" onclick="setOwnerCategoryFilter('Print & Photo')">🖨️ Print/Photo</button>
+                                <button type="button" class="cat-pill" data-cat="Certificate" onclick="setOwnerCategoryFilter('Certificate')">📜 Certificate</button>
+                                <button type="button" class="cat-pill" data-cat="Government" onclick="setOwnerCategoryFilter('Government')">🏛️ Govt / Odisha</button>
+                                <button type="button" class="cat-pill" data-cat="CSC" onclick="setOwnerCategoryFilter('CSC')">💳 Banking / CSC</button>
                             </div>
                             <div class="service-picker-touch-list" id="ownerServicePickerList"></div>
                             <select id="ownerWorkSelect" style="display:none;"></select>
@@ -3959,23 +3955,19 @@
                         <div class="service-select-wrapper">
                             <div style="position:relative;">
                                 <input type="text" id="empServiceSearchInput" class="search-input"
-                                    placeholder="🔍 Type to search 80+ Seva services..."
-                                    oninput="filterEmpServiceOptions()">
+                                    placeholder="🔍 Search 80+ Seva services (PAN, DL, Aadhar, Krushak, Print)..."
+                                    oninput="filterEmpServiceOptions()"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('empCustName')?.focus();}">
                                 <button type="button" onclick="clearEmpServiceSearch()"
                                     style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-light);font-size:14px;padding:4px;"><i
                                         class="fas fa-times-circle"></i></button>
                             </div>
                             <div class="service-category-pills" id="empCategoryPills">
-                                <button type="button" class="cat-pill active"
-                                    onclick="setEmpCategoryFilter('all')">All</button>
-                                <button type="button" class="cat-pill"
-                                    onclick="setEmpCategoryFilter('Print & Photo')">🖨️ Print/Photo</button>
-                                <button type="button" class="cat-pill" onclick="setEmpCategoryFilter('Certificate')">📜
-                                    Certificate</button>
-                                <button type="button" class="cat-pill" onclick="setEmpCategoryFilter('Government')">🏛️
-                                    Govt / Odisha</button>
-                                <button type="button" class="cat-pill" onclick="setEmpCategoryFilter('CSC')">💳 Banking
-                                    / CSC</button>
+                                <button type="button" class="cat-pill active" data-cat="all" onclick="setEmpCategoryFilter('all')">All</button>
+                                <button type="button" class="cat-pill" data-cat="Print & Photo" onclick="setEmpCategoryFilter('Print & Photo')">🖨️ Print/Photo</button>
+                                <button type="button" class="cat-pill" data-cat="Certificate" onclick="setEmpCategoryFilter('Certificate')">📜 Certificate</button>
+                                <button type="button" class="cat-pill" data-cat="Government" onclick="setEmpCategoryFilter('Government')">🏛️ Govt / Odisha</button>
+                                <button type="button" class="cat-pill" data-cat="CSC" onclick="setEmpCategoryFilter('CSC')">💳 Banking / CSC</button>
                             </div>
                             <div class="service-picker-touch-list" id="empServicePickerList"></div>
                             <select id="empWorkSelect" style="display:none;"></select>
@@ -5704,6 +5696,64 @@
             }
         }
 
+        // Track recently deleted & approved work entry IDs across cloud sync cycles
+        let recentlyDeletedWorkIds = new Set();
+        try {
+            const storedDel = localStorage.getItem('kjr_del_work_ids');
+            if (storedDel) recentlyDeletedWorkIds = new Set(JSON.parse(storedDel));
+        } catch (e) {}
+
+        let recentlyApprovedWorkIds = new Set();
+        try {
+            const storedAppr = localStorage.getItem('kjr_appr_work_ids');
+            if (storedAppr) recentlyApprovedWorkIds = new Set(JSON.parse(storedAppr));
+        } catch (e) {}
+
+        function deduplicateWorkEntriesList(list) {
+            if (!list || !Array.isArray(list)) return [];
+            const unique = [];
+            const seenIds = new Set();
+            const seenContent = new Map();
+
+            for (let i = 0; i < list.length; i++) {
+                const item = list[i];
+                if (!item) continue;
+                const sid = String(item.id || '').trim();
+                if (!sid || seenIds.has(sid)) continue;
+                if (recentlyDeletedWorkIds.has(sid)) continue;
+
+                if (recentlyApprovedWorkIds.has(sid)) {
+                    item.approvalStatus = 'approved';
+                }
+
+                // Normalise fields for duplicate detection
+                const empId = String(item.employeeId || item.employeeName || '').trim().toLowerCase();
+                const workName = String(item.workName || '').trim().toLowerCase();
+                const dateStr = getNormalizedDateStr(item.date || '');
+                const custName = String(item.customerName || '').trim().toLowerCase();
+                const price = Math.round((parseFloat(item.customerPrice) || 0) * 100);
+                const timeStr = String(item.time || '').trim().slice(0, 5); // HH:MM
+
+                // Fingerprint for rapid duplicate taps / submissions
+                const contentKey = `${empId}_${workName}_${dateStr}_${custName}_${price}_${timeStr}`;
+
+                if (seenContent.has(contentKey)) {
+                    const existing = seenContent.get(contentKey);
+                    // If clone was approved, upgrade existing to approved
+                    if (item.approvalStatus === 'approved' && existing.approvalStatus !== 'approved') {
+                        existing.approvalStatus = 'approved';
+                    }
+                    recentlyDeletedWorkIds.add(sid);
+                    continue;
+                }
+
+                seenIds.add(sid);
+                seenContent.set(contentKey, item);
+                unique.push(item);
+            }
+            return unique;
+        }
+
         function mergeCloudData(cloudData) {
             if (!currentOwner && owners && owners[0]) currentOwner = owners[0];
             if (!currentOwner) return;
@@ -5711,21 +5761,43 @@
             if (cloudData.workEntries && Array.isArray(cloudData.workEntries)) {
                 const localEntries = currentOwner.workEntries || [];
                 const entryMap = new Map();
-                cloudData.workEntries.forEach(e => {
-                    if (e && e.id) {
-                        if (e.date) e.date = getNormalizedDateStr(e.date);
-                        entryMap.set(String(e.id), e);
-                    }
-                });
+
+                // 1. Index local entries first (local actions take precedence)
                 localEntries.forEach(e => {
                     if (e && e.id) {
-                        if (e.date) e.date = getNormalizedDateStr(e.date);
-                        if (!entryMap.has(String(e.id))) {
-                            entryMap.set(String(e.id), e);
+                        const sid = String(e.id).trim();
+                        if (recentlyDeletedWorkIds.has(sid)) return;
+                        if (recentlyApprovedWorkIds.has(sid)) {
+                            e.approvalStatus = 'approved';
                         }
+                        if (e.date) e.date = getNormalizedDateStr(e.date);
+                        entryMap.set(sid, e);
                     }
                 });
-                currentOwner.workEntries = Array.from(entryMap.values());
+
+                // 2. Merge cloud entries without reverting approved items or reviving deleted records
+                cloudData.workEntries.forEach(e => {
+                    if (!e || !e.id) return;
+                    const sid = String(e.id).trim();
+                    if (recentlyDeletedWorkIds.has(sid)) return;
+                    if (recentlyApprovedWorkIds.has(sid)) {
+                        e.approvalStatus = 'approved';
+                    }
+                    if (e.date) e.date = getNormalizedDateStr(e.date);
+
+                    if (!entryMap.has(sid)) {
+                        entryMap.set(sid, e);
+                    } else {
+                        const local = entryMap.get(sid);
+                        if (local.approvalStatus === 'approved' || recentlyApprovedWorkIds.has(sid)) {
+                            e.approvalStatus = 'approved';
+                        }
+                        entryMap.set(sid, Object.assign({}, local, e));
+                    }
+                });
+
+                // 3. Deduplicate clones to eliminate multi-tap / sync duplicates
+                currentOwner.workEntries = deduplicateWorkEntriesList(Array.from(entryMap.values()));
             }
             if (cloudData.paymentRecords && Array.isArray(cloudData.paymentRecords)) currentOwner.paymentRecords = cloudData.paymentRecords;
             if (cloudData.paymentRequests && Array.isArray(cloudData.paymentRequests)) currentOwner.paymentRequests = cloudData.paymentRequests;
@@ -6320,6 +6392,10 @@
                     if (a.checkIn) a.checkIn = formatCleanTime(a.checkIn);
                     if (a.checkOut) a.checkOut = formatCleanTime(a.checkOut);
                 });
+            }
+            // Deduplicate and clean work entries on startup
+            if (currentOwner.workEntries && Array.isArray(currentOwner.workEntries)) {
+                currentOwner.workEntries = deduplicateWorkEntriesList(currentOwner.workEntries);
             }
             syncCatalogFromWorkEntries();
             servicesCatalog = currentOwner.servicesCatalog;
@@ -7093,17 +7169,33 @@
         let ownerSelectedCategory = 'all';
         let empSelectedCategory = 'all';
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function escapeJs(str) {
+            if (!str) return '';
+            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
         function setOwnerCategoryFilter(cat) {
             ownerSelectedCategory = cat;
-            document.querySelectorAll('#ownerCategoryPills .cat-pill').forEach(p => p.classList.remove('active'));
-            if (window.event && window.event.target) window.event.target.classList.add('active');
+            document.querySelectorAll('#ownerCategoryPills .cat-pill').forEach(p => {
+                p.classList.toggle('active', p.getAttribute('data-cat') === cat);
+            });
+            const inp = document.getElementById('serviceSearchInput');
+            if (inp) inp.value = '';
             filterServiceOptions();
         }
 
         function setEmpCategoryFilter(cat) {
             empSelectedCategory = cat;
-            document.querySelectorAll('#empCategoryPills .cat-pill').forEach(p => p.classList.remove('active'));
-            if (window.event && window.event.target) window.event.target.classList.add('active');
+            document.querySelectorAll('#empCategoryPills .cat-pill').forEach(p => {
+                p.classList.toggle('active', p.getAttribute('data-cat') === cat);
+            });
+            const inp = document.getElementById('empServiceSearchInput');
+            if (inp) inp.value = '';
             filterEmpServiceOptions();
         }
 
@@ -7111,34 +7203,129 @@
             const inp = document.getElementById('serviceSearchInput');
             if (inp) inp.value = '';
             filterServiceOptions();
+            inp?.focus();
         }
 
         function clearEmpServiceSearch() {
             const inp = document.getElementById('empServiceSearchInput');
             if (inp) inp.value = '';
             filterEmpServiceOptions();
+            inp?.focus();
         }
 
-        // Smart flexible search matcher (handles typos, repeated letters like 'oussc' vs 'ousssc', abbreviations)
+        function matchServiceCategory(serviceCategory, selectedCategory) {
+            if (!selectedCategory || selectedCategory === 'all') return true;
+            const sc = (serviceCategory || '').toLowerCase();
+            const sel = selectedCategory.toLowerCase();
+            if (sc === sel || sc.includes(sel) || sel.includes(sc)) return true;
+            if (sel === 'csc' && (sc.includes('bank') || sc.includes('finance') || sc.includes('csc'))) return true;
+            if (sel.includes('print') && (sc.includes('photo') || sc.includes('print'))) return true;
+            if (sel.includes('gov') && (sc.includes('gov') || sc.includes('odisha') || sc.includes('yojana'))) return true;
+            if (sel.includes('cert') && sc.includes('cert')) return true;
+            return false;
+        }
+
+        // Comprehensive alias & keyword dictionary for Indian Cyber & CSC Seva Kendras
+        const SERVICE_SEARCH_ALIASES = {
+            'dl': ['driving licence', 'learner licence'],
+            'driving': ['driving licence', 'learner licence'],
+            'license': ['licence'],
+            'licence': ['licence'],
+            'rc': ['vehicle rc'],
+            'rc book': ['vehicle rc'],
+            'xerox': ['b & w print', 'color print'],
+            'photocopy': ['b & w print', 'color print'],
+            'photo copy': ['b & w print', 'color print'],
+            'copy': ['print', 'photo'],
+            'colour': ['color print'],
+            'color': ['color print'],
+            'black and white': ['b & w print'],
+            'b/w': ['b & w print'],
+            'bw': ['b & w print'],
+            'uidai': ['aadhar'],
+            'adhaar': ['aadhar'],
+            'adhar': ['aadhar'],
+            'aadhar': ['aadhar card'],
+            'epic': ['voter'],
+            'election': ['voter'],
+            'voter id': ['voter'],
+            'rashan': ['ration'],
+            'pds': ['ration'],
+            'residential': ['residence'],
+            'resident': ['residence'],
+            'nativity': ['residence'],
+            'niwasi': ['residence'],
+            'jati': ['caste'],
+            'obc': ['caste'],
+            'sc': ['caste'],
+            'st': ['caste'],
+            'sebc': ['caste'],
+            'aaya': ['income'],
+            'shramik': ['labour'],
+            'labor': ['labour'],
+            'eshram': ['labour'],
+            'e-shram': ['labour'],
+            'kisan': ['kissan', 'krushak'],
+            'pm kisan': ['cm kissan', 'krushak'],
+            'pmkisan': ['cm kissan', 'krushak'],
+            'farmer': ['krushak', 'cm kissan'],
+            'bijli': ['electricity'],
+            'current bill': ['electricity'],
+            'light bill': ['electricity'],
+            'electric bill': ['electricity'],
+            'latrine': ['toilet'],
+            'sbm': ['toilet'],
+            'khajana': ['pauti', 'gharabadi'],
+            'land tax': ['pauti', 'gharabadi'],
+            'jami': ['pauti', 'gharabadi'],
+            'dmt': ['money transfer'],
+            'cash': ['aeps', 'withdrawal'],
+            'withdrawal': ['aeps cash withdrawal'],
+            'constable': ['odisha police constable'],
+            'recruitment': ['ossc', 'police', 'oussc']
+        };
+
         function isServiceQueryMatch(service, query) {
             if (!query) return true;
             const q = query.toLowerCase().trim();
+            if (!q) return true;
+
             const name = (service.name || '').toLowerCase();
             const cat = (service.category || '').toLowerCase();
+            const fullText = name + ' ' + cat;
 
-            // 1. Direct contains in name or category
-            if (name.includes(q) || cat.includes(q)) return true;
+            // 1. Direct contains
+            if (fullText.includes(q)) return true;
 
-            // 2. Normalize repeated letters and ou/o (handles 'oussc' vs 'ousssc', 'ossc' vs 'ousssc')
+            // 2. Direct alias match
+            if (SERVICE_SEARCH_ALIASES[q]) {
+                if (SERVICE_SEARCH_ALIASES[q].some(a => fullText.includes(a))) return true;
+            }
+
+            // Check if any alias key is contained in query
+            for (const [aliasKey, targetList] of Object.entries(SERVICE_SEARCH_ALIASES)) {
+                if (q === aliasKey || q.includes(aliasKey)) {
+                    if (targetList.some(target => fullText.includes(target))) return true;
+                }
+            }
+
+            // 3. Normalized phonetics (e.g. ousssc vs ossc vs oussc)
             const norm = (str) => str.toLowerCase().replace(/ou/g, 'o').replace(/(.)\1+/g, '$1');
             const qNorm = norm(q);
             const nameNorm = norm(name);
-            if (qNorm && (nameNorm.includes(qNorm) || norm(cat).includes(qNorm))) return true;
-
-            // 3. Multi-word search (e.g. "police oussc" or "ossc police")
-            const words = q.split(/[\s/,-]+/).filter(Boolean);
-            if (words.length > 1 && words.every(w => name.includes(w) || norm(name).includes(norm(w)))) {
+            if (qNorm.length >= 3 && (nameNorm.includes(qNorm) || norm(cat).includes(qNorm))) {
                 return true;
+            }
+
+            // 4. Multi-word search (every word must match either directly or via alias)
+            const words = q.split(/[\s/,-]+/).filter(Boolean);
+            if (words.length > 1) {
+                const allWordsMatch = words.every(w => {
+                    if (fullText.includes(w) || (w.length >= 3 && norm(fullText).includes(norm(w)))) return true;
+                    if (SERVICE_SEARCH_ALIASES[w] && SERVICE_SEARCH_ALIASES[w].some(a => fullText.includes(a))) return true;
+                    return false;
+                });
+                if (allWordsMatch) return true;
             }
 
             return false;
@@ -7159,7 +7346,7 @@
             let addedCount = 0;
             entries.forEach(entry => {
                 const wName = (entry.workName || '').toUpperCase().trim();
-                if (wName && wName !== 'OTHER' && !catMap.has(wName)) {
+                if (wName && !wName.startsWith('OTHER') && !catMap.has(wName)) {
                     const newSvc = {
                         name: wName,
                         category: 'Government',
@@ -7175,7 +7362,7 @@
             if (addedCount > 0) {
                 servicesCatalog = currentOwner.servicesCatalog;
                 saveOwners();
-                console.log(`✅ Auto-discovered ${addedCount} services from work entries into catalog (e.g. OUSSSC POLICE)`);
+                console.log(`✅ Auto-discovered ${addedCount} services from work entries into catalog`);
             }
         }
 
@@ -7191,50 +7378,61 @@
             servicesCatalog = catalog;
 
             let filtered = catalog.filter(s => {
-                // If user types a search query, search all categories so user never misses matching services!
-                const matchCat = (query.length > 0) || (ownerSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(ownerSelectedCategory.toLowerCase())));
+                const matchCat = (query.length > 0) || matchServiceCategory(s.category, ownerSelectedCategory);
                 const matchQuery = isServiceQueryMatch(s, query);
                 return matchCat && matchQuery;
             });
 
             // Update underlying select
             sel.innerHTML = filtered.map(s =>
-                `<option value="${s.name}" data-customer="${s.customerPrice}" data-employee="${s.employeePayment}">${s.name} - ₹${s.customerPrice} | ₹${s.employeePayment}</option>`
+                `<option value="${escapeHtml(s.name)}" data-customer="${s.customerPrice}" data-employee="${s.employeePayment}">${escapeHtml(s.name)} - ₹${s.customerPrice} | ₹${s.employeePayment}</option>`
             ).join('') + `<option value="OTHER" data-customer="0" data-employee="0">✏️ OTHER (Custom Price)</option>`;
 
-            if (filtered.length > 0 && (!sel.value || !filtered.some(s => s.name === sel.value))) {
-                sel.value = filtered[0].name;
+            if (filtered.length > 0) {
+                if (!sel.value || !filtered.some(s => s.name === sel.value)) {
+                    sel.value = filtered[0].name;
+                }
+            } else {
+                sel.value = 'OTHER';
             }
 
-            // Update touch cards
-            listContainer.innerHTML = filtered.map((s) => {
+            // Build touch cards list
+            let cardsHtml = filtered.map(s => {
                 const isSelected = (sel.value === s.name);
                 return `
-                <div class="service-touch-card ${isSelected ? 'selected' : ''}" onclick="selectOwnerTouchService('${s.name.replace(/'/g, "\\'")}')">
+                <div class="service-touch-card ${isSelected ? 'selected' : ''}" data-service-name="${escapeHtml(s.name)}" onclick="selectOwnerTouchService('${escapeJs(s.name)}')">
                     <div class="card-left">
-                        <span class="card-title">${s.name}</span>
-                        <span class="card-cat">${s.category || 'General'}</span>
+                        <span class="card-title">${escapeHtml(s.name)}</span>
+                        <span class="card-cat">${escapeHtml(s.category || 'General')}</span>
                     </div>
                     <div class="card-right">
                         <span class="badge badge-success">₹${s.customerPrice}</span>
                         <span class="badge badge-info">Pay: ₹${s.employeePayment}</span>
                         ${isSelected ? '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>' : ''}
                     </div>
-                </div>
-            `;
-            }).join('') + `
-                <div class="service-touch-card ${sel.value === 'OTHER' ? 'selected' : ''}" onclick="selectOwnerTouchService('OTHER')">
+                </div>`;
+            }).join('');
+
+            // Always add the OTHER (Custom Price) card
+            cardsHtml += `
+                <div class="service-touch-card ${sel.value === 'OTHER' ? 'selected' : ''}" data-service-name="OTHER" onclick="selectOwnerTouchService('OTHER')">
                     <div class="card-left">
                         <span class="card-title">✏️ OTHER (Custom Price)</span>
-                        <span class="card-cat">Manual Pricing</span>
+                        <span class="card-cat">Manual Pricing / Walk-in</span>
                     </div>
                     <div class="card-right">
                         <span class="badge badge-warning">Custom</span>
                         ${sel.value === 'OTHER' ? '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>' : ''}
                     </div>
-                </div>
-            `;
+                </div>`;
 
+            if (filtered.length === 0) {
+                cardsHtml = `<div style="padding:10px;text-align:center;color:var(--text-light);font-size:12px;">No catalog service matched "<strong>${escapeHtml(query)}</strong>". Use <strong>OTHER (Custom Price)</strong> below:</div>` + cardsHtml;
+            }
+
+            listContainer.innerHTML = cardsHtml;
+            const manualGroup = document.getElementById('manualPriceGroup');
+            if (manualGroup) manualGroup.style.display = (sel.value === 'OTHER' ? 'block' : 'none');
             updateOwnerServiceBanner();
         }
 
@@ -7243,12 +7441,12 @@
             if (!sel) return;
             sel.value = name;
             document.querySelectorAll('#ownerServicePickerList .service-touch-card').forEach(c => {
-                const title = c.querySelector('.card-title')?.textContent.trim() || '';
-                const isSelected = (title === name || (name === 'OTHER' && title.includes('OTHER')));
+                const cName = c.getAttribute('data-service-name');
+                const isSelected = (cName === name);
                 c.classList.toggle('selected', isSelected);
                 let checkBadge = c.querySelector('.touch-check-badge');
                 if (isSelected && !checkBadge) {
-                    c.querySelector('.card-right').insertAdjacentHTML('beforeend', '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>');
+                    c.querySelector('.card-right')?.insertAdjacentHTML('beforeend', '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>');
                 } else if (!isSelected && checkBadge) {
                     checkBadge.remove();
                 }
@@ -7265,7 +7463,16 @@
             const chosen = sel.options[sel.selectedIndex];
             if (chosen && chosen.value) {
                 banner.style.display = 'flex';
-                banner.innerHTML = `<span><i class="fas fa-check-circle"></i> Selected: <strong>${chosen.value}</strong></span> <span>Cust: ₹${chosen.getAttribute('data-customer') || 0} | Staff: ₹${chosen.getAttribute('data-employee') || 0}</span>`;
+                const isOther = chosen.value === 'OTHER';
+                banner.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-check-circle" style="color:var(--secondary);font-size:14px;"></i>
+                        <span>Selected: <strong style="color:var(--text-primary);font-size:13px;">${escapeHtml(chosen.value)}</strong></span>
+                    </div>
+                    <div style="font-weight:700;color:var(--secondary);">
+                        ${isOther ? 'Custom Price (Enter Below)' : `Cust: ₹${chosen.getAttribute('data-customer') || 0} | Staff: ₹${chosen.getAttribute('data-employee') || 0}`}
+                    </div>
+                `;
             } else {
                 banner.style.display = 'none';
             }
@@ -7283,38 +7490,59 @@
             servicesCatalog = catalog;
 
             let filtered = catalog.filter(s => {
-                const matchCat = (query.length > 0) || (empSelectedCategory === 'all' || (s.category && s.category.toLowerCase().includes(empSelectedCategory.toLowerCase())));
+                const matchCat = (query.length > 0) || matchServiceCategory(s.category, empSelectedCategory);
                 const matchQuery = isServiceQueryMatch(s, query);
                 return matchCat && matchQuery;
             });
 
-            // Update underlying select
+            // Update underlying select including OTHER option so staff is never blocked
             sel.innerHTML = filtered.map(s =>
-                `<option value="${s.name}" data-customer="${s.customerPrice}" data-employee="${s.employeePayment}">${s.name} - ₹${s.customerPrice} | ₹${s.employeePayment}</option>`
-            ).join('');
+                `<option value="${escapeHtml(s.name)}" data-customer="${s.customerPrice}" data-employee="${s.employeePayment}">${escapeHtml(s.name)} - ₹${s.customerPrice} | ₹${s.employeePayment}</option>`
+            ).join('') + `<option value="OTHER" data-customer="0" data-employee="0">✏️ OTHER (Custom Service)</option>`;
 
-            if (filtered.length > 0 && (!sel.value || !filtered.some(s => s.name === sel.value))) {
-                sel.value = filtered[0].name;
+            if (filtered.length > 0) {
+                if (!sel.value || !filtered.some(s => s.name === sel.value)) {
+                    sel.value = filtered[0].name;
+                }
+            } else {
+                sel.value = 'OTHER';
             }
 
             // Update touch cards
-            listContainer.innerHTML = filtered.map((s) => {
+            let cardsHtml = filtered.map((s) => {
                 const isSelected = (sel.value === s.name);
                 return `
-                <div class="service-touch-card ${isSelected ? 'selected' : ''}" onclick="selectEmpTouchService('${s.name.replace(/'/g, "\\'")}')">
+                <div class="service-touch-card ${isSelected ? 'selected' : ''}" data-service-name="${escapeHtml(s.name)}" onclick="selectEmpTouchService('${escapeJs(s.name)}')">
                     <div class="card-left">
-                        <span class="card-title">${s.name}</span>
-                        <span class="card-cat">${s.category || 'General'}</span>
+                        <span class="card-title">${escapeHtml(s.name)}</span>
+                        <span class="card-cat">${escapeHtml(s.category || 'General')}</span>
                     </div>
                     <div class="card-right">
                         <span class="badge badge-success">₹${s.customerPrice}</span>
                         <span class="badge badge-info">Earn: ₹${s.employeePayment}</span>
                         ${isSelected ? '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>' : ''}
                     </div>
-                </div>
-            `;
-            }).join('') || '<div style="padding:14px;text-align:center;color:var(--text-light);font-size:13px;">No matching services found</div>';
+                </div>`;
+            }).join('');
 
+            // Add OTHER option card for staff too
+            cardsHtml += `
+                <div class="service-touch-card ${sel.value === 'OTHER' ? 'selected' : ''}" data-service-name="OTHER" onclick="selectEmpTouchService('OTHER')">
+                    <div class="card-left">
+                        <span class="card-title">✏️ OTHER (Custom Service)</span>
+                        <span class="card-cat">Manual Pricing / Special Work</span>
+                    </div>
+                    <div class="card-right">
+                        <span class="badge badge-warning">Custom</span>
+                        ${sel.value === 'OTHER' ? '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>' : ''}
+                    </div>
+                </div>`;
+
+            if (filtered.length === 0) {
+                cardsHtml = `<div style="padding:10px;text-align:center;color:var(--text-light);font-size:12px;">No catalog service matched "<strong>${escapeHtml(query)}</strong>". Use <strong>OTHER (Custom Service)</strong> below:</div>` + cardsHtml;
+            }
+
+            listContainer.innerHTML = cardsHtml;
             updateEmpServiceBanner();
         }
 
@@ -7323,12 +7551,12 @@
             if (!sel) return;
             sel.value = name;
             document.querySelectorAll('#empServicePickerList .service-touch-card').forEach(c => {
-                const title = c.querySelector('.card-title')?.textContent.trim() || '';
-                const isSelected = (title === name);
+                const cName = c.getAttribute('data-service-name');
+                const isSelected = (cName === name);
                 c.classList.toggle('selected', isSelected);
                 let checkBadge = c.querySelector('.touch-check-badge');
                 if (isSelected && !checkBadge) {
-                    c.querySelector('.card-right').insertAdjacentHTML('beforeend', '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>');
+                    c.querySelector('.card-right')?.insertAdjacentHTML('beforeend', '<span class="badge touch-check-badge" style="background:#2c9f6e;color:white;font-weight:700;padding:2px 6px;"><i class="fas fa-check"></i></span>');
                 } else if (!isSelected && checkBadge) {
                     checkBadge.remove();
                 }
@@ -7343,15 +7571,21 @@
             const chosen = sel.options[sel.selectedIndex];
             if (chosen && chosen.value) {
                 banner.style.display = 'flex';
-                banner.innerHTML = `<span><i class="fas fa-check-circle"></i> Selected: <strong>${chosen.value}</strong></span> <span>Price: ₹${chosen.getAttribute('data-customer') || 0} | Your Earning: ₹${chosen.getAttribute('data-employee') || 0}</span>`;
+                const isOther = chosen.value === 'OTHER';
+                banner.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-check-circle" style="color:var(--secondary);font-size:14px;"></i>
+                        <span>Selected: <strong style="color:var(--text-primary);font-size:13px;">${escapeHtml(chosen.value)}</strong></span>
+                    </div>
+                    <div style="font-weight:700;color:var(--secondary);">
+                        ${isOther ? 'Custom Service (Enter Payment Below)' : `Price: ₹${chosen.getAttribute('data-customer') || 0} | Your Earning: ₹${chosen.getAttribute('data-employee') || 0}`}
+                    </div>
+                `;
             } else {
                 banner.style.display = 'none';
             }
         }
 
-        // =============================================
-        // OWNER DASHBOARD LOGIC
-        // =============================================
         function initOwnerDashboard() {
             updateOwnerSelectors();
             renderEmployeeList();
@@ -7388,6 +7622,16 @@
         }
 
         function addOwnerWork() {
+            const addBtn = document.getElementById('ownerAddWorkBtn');
+            if (addBtn) {
+                if (addBtn.dataset.submitting === 'true') return;
+                addBtn.dataset.submitting = 'true';
+                addBtn.disabled = true;
+                setTimeout(() => {
+                    addBtn.disabled = false;
+                    addBtn.dataset.submitting = 'false';
+                }, 1500);
+            }
             const empId = document.getElementById('ownerEmpSelect').value;
             const emp = currentOwner.employees.find(e => e.id === empId);
             if (!emp) return showToast('❌ Select a staff member', 'error');
@@ -7415,7 +7659,7 @@
             }
 
             const newEntry = {
-                id: Date.now() + Math.random(),
+                id: 'work_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
                 employeeId: emp.id,
                 employeeName: emp.name,
                 workName: serviceName,
@@ -7434,6 +7678,16 @@
                 approvalStatus: 'approved' // Owner directly approved
             };
 
+            if (serviceName === 'OTHER') {
+                const manualPay = parseFloat(document.getElementById('manualPriceInput')?.value) || 0;
+                newEntry.employeePayment = manualPay;
+                newEntry.customerPrice = customerPayment > 0 ? customerPayment : manualPay;
+                const customQuery = (document.getElementById('serviceSearchInput')?.value || '').trim();
+                if (customQuery) {
+                    newEntry.workName = 'OTHER: ' + customQuery.toUpperCase();
+                }
+            }
+
             currentOwner.workEntries.push(newEntry);
             saveOwners();
             renderOwnerTables();
@@ -7442,13 +7696,21 @@
             renderFinancialSummary();
             updateBadges();
 
-            addNotification('➕ Work Logged', `${emp.name}: ${serviceName}`, 'success');
+            addNotification('➕ Work Logged', `${emp.name}: ${newEntry.workName}`, 'success');
             showToast('✅ Work recorded & staff wallet credited!', 'success');
 
-            // Reset inputs
-            ['ownerCustName', 'ownerCustPhone', 'ownerPrintCopies', 'ownerScanCopies', 'ownerCustPayment'].forEach(id => {
-                document.getElementById(id).value = '';
+            // Reset inputs cleanly
+            ['ownerCustName', 'ownerCustPhone', 'ownerPrintCopies', 'ownerScanCopies', 'ownerCustPayment', 'manualPriceInput'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = (id.includes('Copies') || id.includes('Payment') || id.includes('Price')) ? '0' : '';
             });
+            const sInp = document.getElementById('serviceSearchInput');
+            if (sInp) sInp.value = '';
+            ownerSelectedCategory = 'all';
+            document.querySelectorAll('#ownerCategoryPills .cat-pill').forEach(p => {
+                p.classList.toggle('active', p.getAttribute('data-cat') === 'all');
+            });
+            filterServiceOptions();
 
             // Sync to cloud if active
             if (cloudApiUrl) triggerManualSync();
@@ -7657,68 +7919,166 @@
         }
 
         function approveWork(id) {
-            const entry = currentOwner.workEntries.find(e => String(e.id) === String(id));
-            if (entry) {
-                entry.approvalStatus = 'approved';
-                saveOwners();
-                renderOwnerTables();
-                renderOwnerStats();
-                renderProfitAnalysis();
-                renderFinancialSummary();
-                updateBadges();
-                showToast('✅ Work Approved & Staff Wallet Credited!', 'success');
+            if (!currentOwner || !currentOwner.workEntries) return;
+            const sid = String(id).trim();
+            const entry = currentOwner.workEntries.find(e => String(e.id).trim() === sid);
+            if (!entry) return;
 
-                // Send approveWork to Google Apps Script cloud backend
-                if (cloudApiUrl) {
-                    try {
-                        fetch(cloudApiUrl, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ action: 'approveWork', id: id })
-                        }).catch(() => {});
-                    } catch (e) {}
-                    setTimeout(() => triggerManualSync(), 1500);
+            // Track recently approved ID so cloud sync cannot revert it to pending
+            recentlyApprovedWorkIds.add(sid);
+            try {
+                localStorage.setItem('kjr_appr_work_ids', JSON.stringify(Array.from(recentlyApprovedWorkIds)));
+            } catch (e) {}
+
+            entry.approvalStatus = 'approved';
+
+            // Find and collapse any duplicate clones of this work submission
+            const empId = String(entry.employeeId || entry.employeeName || '').trim().toLowerCase();
+            const workName = String(entry.workName || '').trim().toLowerCase();
+            const dateStr = getNormalizedDateStr(entry.date || '');
+            const custName = String(entry.customerName || '').trim().toLowerCase();
+            const price = Math.round((parseFloat(entry.customerPrice) || 0) * 100);
+
+            const clonesToDelete = [];
+            currentOwner.workEntries = currentOwner.workEntries.filter(e => {
+                const eSid = String(e.id).trim();
+                if (eSid === sid) return true; // Keep this approved record
+
+                const eEmp = String(e.employeeId || e.employeeName || '').trim().toLowerCase();
+                const eWork = String(e.workName || '').trim().toLowerCase();
+                const eDate = getNormalizedDateStr(e.date || '');
+                const eCust = String(e.customerName || '').trim().toLowerCase();
+                const ePrice = Math.round((parseFloat(e.customerPrice) || 0) * 100);
+
+                if (eEmp === empId && eWork === workName && eDate === dateStr && eCust === custName && ePrice === price) {
+                    // Accidental duplicate clone: mark for deletion and purge
+                    clonesToDelete.push(eSid);
+                    recentlyDeletedWorkIds.add(eSid);
+                    return false;
                 }
+                return true;
+            });
 
-                // Broadcast in real-time to Staff's phone via MQTT
-                if (typeof publishRealtimeMqtt === 'function') {
-                    publishRealtimeMqtt('work', { type: 'workApproved', id: id, entry: entry });
-                }
-
-                const emp = currentOwner.employees.find(e => isRecordForStaff(entry, e));
-                addNotification('✅ Work Approved', `${entry.workName || 'Work'} approved for ${emp ? emp.name : 'Staff'} (₹${(entry.customerPrice || 0).toFixed(2)})`, 'success');
-
-                const cleanPhone = emp ? getCleanPhone(emp.mobile) : '';
-                if (cleanPhone.length === 10) {
-                    setTimeout(() => {
-                        if (confirm(`✅ Work approved for ${emp.name}!\n\n📲 Send WhatsApp approval notification to ${emp.name} (+91 ${cleanPhone})?`)) {
-                            sendWhatsAppWorkApproval(entry, emp);
-                        }
-                    }, 150);
-                }
+            if (clonesToDelete.length > 0) {
+                try {
+                    localStorage.setItem('kjr_del_work_ids', JSON.stringify(Array.from(recentlyDeletedWorkIds)));
+                } catch (e) {}
             }
-        }
 
-        function deleteWorkEntry(id) {
-            if (confirm('Delete this record?')) {
-                currentOwner.workEntries = currentOwner.workEntries.filter(w => String(w.id) !== String(id));
-                saveOwners();
-                renderOwnerTables();
-                renderOwnerStats();
-                renderFinancialSummary();
-                addNotification('🗑️ Record Deleted', `Work entry #${id} was deleted`, 'warning');
-                showToast('Record deleted', 'info');
+            saveOwners();
+            renderOwnerTables();
+            renderOwnerStats();
+            renderProfitAnalysis();
+            renderFinancialSummary();
+            updateBadges();
+            showToast('✅ Work Approved & Staff Wallet Credited!', 'success');
 
-                if (cloudApiUrl) {
+            // Send approveWork and delete any redundant clones in Google Apps Script
+            if (cloudApiUrl) {
+                try {
                     fetch(cloudApiUrl, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'deleteRecord', sheetName: 'WorkEntries', id: String(id) })
-                    }).then(() => {
-                        console.log('✅ Work entry deleted from cloud sheet:', id);
-                    }).catch(err => console.warn('Cloud work delete warning:', err));
+                        body: JSON.stringify({ action: 'approveWork', id: sid })
+                    }).catch(() => {});
+
+                    clonesToDelete.forEach(cloneId => {
+                        fetch(cloudApiUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'deleteRecord', sheetName: 'WorkEntries', id: cloneId })
+                        }).catch(() => {});
+                    });
+                } catch (e) {}
+            }
+
+            // Broadcast in real-time to Staff's phone via MQTT
+            if (typeof publishRealtimeMqtt === 'function') {
+                publishRealtimeMqtt('work', { type: 'workApproved', id: sid, entry: entry });
+                clonesToDelete.forEach(cloneId => {
+                    publishRealtimeMqtt('work', { type: 'workDeleted', id: cloneId });
+                });
+            }
+
+            const emp = currentOwner.employees.find(e => isRecordForStaff(entry, e));
+            addNotification('✅ Work Approved', `${entry.workName || 'Work'} approved for ${emp ? emp.name : 'Staff'} (₹${(entry.customerPrice || 0).toFixed(2)})`, 'success');
+
+            const cleanPhone = emp ? getCleanPhone(emp.mobile) : '';
+            if (cleanPhone.length === 10) {
+                setTimeout(() => {
+                    if (confirm(`✅ Work approved for ${emp.name}!
+
+📲 Send WhatsApp approval notification to ${emp.name} (+91 ${cleanPhone})?`)) {
+                        sendWhatsAppWorkApproval(entry, emp);
+                    }
+                }, 150);
+            }
+        }
+
+        function deleteWorkEntry(id) {
+            if (!currentOwner || !currentOwner.workEntries) return;
+            const sid = String(id).trim();
+            const entry = currentOwner.workEntries.find(e => String(e.id).trim() === sid);
+            if (!entry) return;
+
+            if (confirm('Delete this record?')) {
+                // Collect this ID and any duplicate clones of this same submission
+                const idsToDelete = [sid];
+                const empId = String(entry.employeeId || entry.employeeName || '').trim().toLowerCase();
+                const workName = String(entry.workName || '').trim().toLowerCase();
+                const dateStr = getNormalizedDateStr(entry.date || '');
+                const custName = String(entry.customerName || '').trim().toLowerCase();
+                const price = Math.round((parseFloat(entry.customerPrice) || 0) * 100);
+
+                currentOwner.workEntries.forEach(e => {
+                    const eSid = String(e.id).trim();
+                    if (eSid !== sid) {
+                        const eEmp = String(e.employeeId || e.employeeName || '').trim().toLowerCase();
+                        const eWork = String(e.workName || '').trim().toLowerCase();
+                        const eDate = getNormalizedDateStr(e.date || '');
+                        const eCust = String(e.customerName || '').trim().toLowerCase();
+                        const ePrice = Math.round((parseFloat(e.customerPrice) || 0) * 100);
+                        if (eEmp === empId && eWork === workName && eDate === dateStr && eCust === custName && ePrice === price) {
+                            idsToDelete.push(eSid);
+                        }
+                    }
+                });
+
+                // Add all deleted IDs to recentlyDeletedWorkIds and persist
+                idsToDelete.forEach(delId => recentlyDeletedWorkIds.add(delId));
+                try {
+                    localStorage.setItem('kjr_del_work_ids', JSON.stringify(Array.from(recentlyDeletedWorkIds)));
+                } catch (e) {}
+
+                currentOwner.workEntries = currentOwner.workEntries.filter(w => !idsToDelete.includes(String(w.id).trim()));
+                saveOwners();
+                renderOwnerTables();
+                renderOwnerStats();
+                renderFinancialSummary();
+                addNotification('🗑️ Record Deleted', `Work entry #${sid} was deleted`, 'warning');
+                showToast('Record deleted', 'info');
+
+                // Delete all clones from cloud sheet
+                if (cloudApiUrl) {
+                    idsToDelete.forEach(delId => {
+                        fetch(cloudApiUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'deleteRecord', sheetName: 'WorkEntries', id: delId })
+                        }).then(() => {
+                            console.log('✅ Work entry deleted from cloud sheet:', delId);
+                        }).catch(err => console.warn('Cloud work delete warning:', err));
+                    });
+                }
+
+                // Broadcast deletion via MQTT so other open tabs/phones remove it immediately
+                if (typeof publishRealtimeMqtt === 'function') {
+                    idsToDelete.forEach(delId => {
+                        publishRealtimeMqtt('work', { type: 'workDeleted', id: delId });
+                    });
                 }
             }
         }
@@ -8536,6 +8896,19 @@
             updateNotificationBadge();
 
             document.getElementById('empSubmitWorkBtn').onclick = function () {
+                const submitBtn = document.getElementById('empSubmitWorkBtn');
+                if (submitBtn) {
+                    if (submitBtn.dataset.submitting === 'true') return;
+                    submitBtn.dataset.submitting = 'true';
+                    submitBtn.disabled = true;
+                    const origHtml = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+                    setTimeout(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.dataset.submitting = 'false';
+                        submitBtn.innerHTML = origHtml;
+                    }, 2000);
+                }
                 const ws = document.getElementById('empWorkSelect');
                 const sel = ws.options[ws.selectedIndex];
                 if (!sel) return showToast('❌ Select a service', 'error');
@@ -8581,10 +8954,29 @@
                 addNotification('➕ Work Submitted', `${currentEmployee.name} submitted: ${newEntry.workName}`, 'work');
                 updateBadges();
 
+                if (newEntry.workName === 'OTHER') {
+                    const customQuery = (document.getElementById('empServiceSearchInput')?.value || '').trim();
+                    if (customQuery) {
+                        newEntry.workName = 'OTHER: ' + customQuery.toUpperCase();
+                    }
+                    if (customerPayment > 0) {
+                        newEntry.customerPrice = customerPayment;
+                        newEntry.employeePayment = Math.round(customerPayment * 0.15); // Default 15% commission
+                    }
+                }
+
+                // Reset inputs cleanly
                 ['empCustName', 'empCustPhone', 'empCustPayment', 'empPrintCopies', 'empScanCopies'].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.value = id.includes('Copies') || id.includes('Payment') ? '0' : '';
+                    if (el) el.value = (id.includes('Copies') || id.includes('Payment')) ? '0' : '';
                 });
+                const sInpEmp = document.getElementById('empServiceSearchInput');
+                if (sInpEmp) sInpEmp.value = '';
+                empSelectedCategory = 'all';
+                document.querySelectorAll('#empCategoryPills .cat-pill').forEach(p => {
+                    p.classList.toggle('active', p.getAttribute('data-cat') === 'all');
+                });
+                filterEmpServiceOptions();
 
                 // Send to Google Sheets cloud backend
                 if (cloudApiUrl) {
@@ -10966,22 +11358,34 @@
                 } else if (topic.endsWith('/work')) {
                     if (data.type === 'newWorkEntry' && data.entry) {
                         if (!currentOwner.workEntries) currentOwner.workEntries = [];
-                        const exists = currentOwner.workEntries.some(e => String(e.id) === String(data.entry.id));
-                        if (!exists) {
+                        const sid = String(data.entry.id || '').trim();
+                        const exists = currentOwner.workEntries.some(e => String(e.id).trim() === sid);
+                        if (!exists && !recentlyDeletedWorkIds.has(sid)) {
                             currentOwner.workEntries.unshift(data.entry);
+                            currentOwner.workEntries = deduplicateWorkEntriesList(currentOwner.workEntries);
                             saveOwners();
                             refreshAllViews();
                             addNotification('➕ Work Submitted', `${data.staffName || 'Staff'} submitted: ${data.entry.workName}`, 'work');
                         }
                     } else if (data.type === 'workApproved' && data.id) {
+                        const sid = String(data.id || '').trim();
+                        recentlyApprovedWorkIds.add(sid);
                         if (!currentOwner.workEntries) currentOwner.workEntries = [];
-                        const entry = currentOwner.workEntries.find(e => String(e.id) === String(data.id));
+                        const entry = currentOwner.workEntries.find(e => String(e.id).trim() === sid);
                         if (entry) {
                             entry.approvalStatus = 'approved';
                             saveOwners();
                             refreshAllViews();
                             showToast('🎉 Your work was approved by the Owner! Wallet credited.', 'success');
                             addNotification('✅ Work Approved', `Owner approved: ${entry.workName || 'Job'}`, 'success');
+                        }
+                    } else if (data.type === 'workDeleted' && data.id) {
+                        const delId = String(data.id || '').trim();
+                        recentlyDeletedWorkIds.add(delId);
+                        if (currentOwner && currentOwner.workEntries) {
+                            currentOwner.workEntries = currentOwner.workEntries.filter(w => String(w.id).trim() !== delId);
+                            saveOwners();
+                            refreshAllViews();
                         }
                     }
                 } else if (topic.endsWith('/serviceCatalog')) {
